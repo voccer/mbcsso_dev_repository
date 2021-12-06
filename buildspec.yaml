@@ -29,10 +29,10 @@ phases:
       - for FUNCTION_NAME in $(echo $FUNCTION_NAMES | sed "s/ / /g"); do
         echo $FUNCTION_NAME;
         IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri');
-        IMAGE_URIS+="${IMAGE_URI}";
+        IMAGE_URIS+="${IMAGE_URI} ";
         REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3);
         echo "[+] Repo Name ${REPO_NAME}";
-        REPO_NAMES+="${REPO_NAME}";
+        REPO_NAMES+="${REPO_NAME} ";
         done
       - echo "[+] Image URIs $IMAGE_URIS"
       - echo "[+] Repo Names $REPO_NAMES"
