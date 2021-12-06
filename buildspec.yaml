@@ -16,7 +16,7 @@ phases:
       - ENV=dev
       - LATEST_TAG="latest"
       - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-      - FUNCTION_NAMES=(${SYSTEM_NAME}_${ENV}_CommandFunction ${SYSTEM_NAME}_${ENV}_ProcessSQSFunction ${SYSTEM_NAME}_${ENV}_ProcessStreamFunction ${SYSTEM_NAME}_${ENV}_AuthFunction ${SYSTEM_NAME}_${ENV}_QueryFunction ${SYSTEM_NAME}_${ENV}_WaitSQSConsumer)
+      - FUNCTION_NAMES="${SYSTEM_NAME}_${ENV}_CommandFunction ${SYSTEM_NAME}_${ENV}_ProcessSQSFunction ${SYSTEM_NAME}_${ENV}_ProcessStreamFunction ${SYSTEM_NAME}_${ENV}_AuthFunction ${SYSTEM_NAME}_${ENV}_QueryFunction ${SYSTEM_NAME}_${ENV}_WaitSQSConsumer"
       - FUNCTION_SRC_DIRS="command process_sqs process_stream authorizer query process_wait"
 
       - aws --version
@@ -25,16 +25,10 @@ phases:
 
       - IMAGE_URIS=()
       - REPO_NAMES=()
-      - LEN=${#FUNCTION_SRC_DIRS[@]}
-      - echo $LEN
       - for TENANT in $(echo $FUNCTION_SRC_DIRS | sed "s/ / /g"); do
         echo $TENANT;
         done
-      - echo ${FUNCTION_SRC_DIRS[1]}
-      - for (( i=0; i<$LEN; i++ )); do
-        echo "[+] Building ${FUNCTION_SRC_DIRS[$i]} image";
-        done
-      - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
+      - for FUNCTION_NAME in $(echo $FUNCTION_NAMES | sed "s/ / /g"; do
         IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri');
         IMAGE_URIS+=("${IMAGE_URI}");
         REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3);
