@@ -25,7 +25,13 @@ def check_authorization(system_id, tenant_id, access_token, config_table_name, r
         return False
 
     keycloak_url = response["Item"]["keycloak_url"]["S"]
+    
     keycloak_realm = response["Item"]["keycloak_realm"]["S"]
+    
+    # #use kms to decrypt keycloak_realm
+    # kms = boto3.client("kms")
+    # keycloak_realm = kms.decrypt(CiphertextBlob=bytes.fromhex(keycloak_realm))['Plaintext'].decode('utf-8')
+    # keycloak_realm_encrypted = kms.encrypt(KeyId='alias/keycloak_realm', Plaintext=keycloak_realm.encode('utf-8'))['CiphertextBlob'].hex()
     
     print(keycloak_url, keycloak_realm)
 
