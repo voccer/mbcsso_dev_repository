@@ -45,12 +45,12 @@ phases:
     commands:
       - echo "SAM packaging completed on `date`"
       - for i in "${!REPO_NAMES[@]}"; do
+        docker push $ECR_URI/${REPO_NAMES[$i]}:$IMAGE_TAG &&
         docker push $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG &&
+        echo "Pushed $ECR_URI/${REPO_NAMES[$i]}:$IMAGE_TAG" &&
+        echo "Pushed $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG" &&
         aws lambda update-function-code --function-name ${FUNCTION_NAMES[$i]} --image-uri $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG;
         done
-      # - docker push $IMAGE_LATEST
-      # - docker push $IMAGE_TAG
-      # - aws lambda update-function-code --function-name $MY_FUNC --image-uri $IMAGE_URI >> /dev/null
 # artifacts:
 #   files:
 #     - packaged.yaml
