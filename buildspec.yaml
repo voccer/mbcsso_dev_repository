@@ -18,27 +18,29 @@ phases:
       - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
       - FUNCTION_NAMES=( ${SYSTEM_NAME}_${ENV}_CommandFunction ${SYSTEM_NAME}_${ENV}_ProcessSQSFunction ${SYSTEM_NAME}_${ENV}_ProcessStreamFunction ${SYSTEM_NAME}_${ENV}_AuthFunction ${SYSTEM_NAME}_${ENV}_QueryFunction ${SYSTEM_NAME}_${ENV}_WaitSQSConsumer )
       - FUNCTION_SRC_DIRS=(command process_sqs process_stream authorizer query process_wait)
-      
+
       - aws --version
       # login to ECR
       - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URI}
 
       - IMAGE_URIS=()
       - REPO_NAMES=()
-      - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
-        IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')
-        IMAGE_URIS+=("${IMAGE_URI}")
-        REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3)
-        REPO_NAMES+=("${REPO_NAME}")
+      - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}";
+        do
+        IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')&&
+        IMAGE_URIS+=("${IMAGE_URI}")&&
+        REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3)&&
+        REPO_NAMES+=("${REPO_NAME}");
         done
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
   build:
     commands:
       - echo "[+] building ...."
-      - for i in "${!REPO_NAMES[@]}"; do
-        docker build -t $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG ${FUNCTION_SRC_DIRS[$i]}
-        docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$TAG_NAME
+      - for i in "${!REPO_NAMES[@]}";
+        do
+        docker build -t $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG ${FUNCTION_SRC_DIRS[$i]}&&
+        docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$TAG_NAME;
         done
 
   post_build:
