@@ -1,9 +1,11 @@
+import os
 import json
 import boto3
 
 
 def lambda_handler(event, context):
     info = {}
+
     for record in event["Records"]:
         info["event_name"] = record["eventName"]
         ddb_arn = record["eventSourceARN"]
@@ -23,9 +25,13 @@ def lambda_handler(event, context):
         elif record["eventName"] == "MODIFY":
             info["data"] = record["dynamodb"]["NewImage"]
 
+    topic_name = os.environ.get("TOPIC_NAME", "mbcsso_dev_topic")
+    region = os.environ.get("REGION", "ap-northeast-1")
+    account_id = os.environ.get("ACCOUNT_ID", "465316005105")
+
     client = boto3.client("sns")
     response = client.publish(
-        TargetArn="arn:aws:sns:ap-northeast-1:465316005105:mbcsso_dev_topic",
+        TargetArn=f"arn:aws:sns:{region}:{account_id}:{topic_name}",
         Message=json.dumps({"default": json.dumps(info)}),
         MessageStructure="json",
     )
