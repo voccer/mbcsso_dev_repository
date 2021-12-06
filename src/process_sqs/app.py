@@ -43,18 +43,18 @@ def lambda_handler(event, context):
 
     for record in event["Records"]:
         body = json.loads(record["body"])
-        mess = json.loads(body["Message"])
-        system_id, tenant_id = mess["system_id"], mess["tenant_id"]
-        event_name = mess["event_name"]
-        data = mess["data"]
+        for mess in json.loads(body["Messages"]):
+            system_id, tenant_id = mess["system_id"], mess["tenant_id"]
+            event_name = mess["event_name"]
+            data = mess["data"]
 
-        table_name = f"{system_name}_{env}_{system_id}_{tenant_id}_users"
-        if event_name == "INSERT":
-            create_data(table_name, data)
-        elif event_name == "MODIFY":
-            update_data(table_name, data)
-        elif event_name == "REMOVE":
-            delete_data(table_name, data)
+            table_name = f"{system_name}_{env}_{system_id}_{tenant_id}_users"
+            if event_name == "INSERT":
+                create_data(table_name, data)
+            elif event_name == "MODIFY":
+                update_data(table_name, data)
+            elif event_name == "REMOVE":
+                delete_data(table_name, data)
 
     ## TODO: sync data to keycloak
 
