@@ -27,6 +27,9 @@ phases:
       - REPO_NAMES=()
       - LEN=${#FUNCTION_SRC_DIRS[@]}
       - echo $LEN
+      - for TENANT in $(echo $FUNCTION_SRC_DIRS | sed "s/ / /g"); do
+        echo $TENANT;
+        done
       - echo ${FUNCTION_SRC_DIRS[1]}
       - for (( i=0; i<$LEN; i++ )); do
         echo "[+] Building ${FUNCTION_SRC_DIRS[$i]} image";
