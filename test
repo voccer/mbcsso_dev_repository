@@ -1,6 +1,11 @@
 #! /bin/bash
-
-FUNCTION_SRC_DIRS=(command process_sqs process_stream authorizer query process_wait)
-for dir in "${!FUNCTION_SRC_DIRS[@]}"; do
-  echo "Building ${FUNCTION_SRC_DIRS[$dir]}..."
+SYSTEM_NAME=mbcsso
+ENV=dev
+FUNCTION_NAMES=( ${SYSTEM_NAME}_${ENV}_CommandFunction ${SYSTEM_NAME}_${ENV}_ProcessSQSFunction ${SYSTEM_NAME}_${ENV}_ProcessStreamFunction ${SYSTEM_NAME}_${ENV}_AuthFunction ${SYSTEM_NAME}_${ENV}_QueryFunction ${SYSTEM_NAME}_${ENV}_WaitSQSConsumer )
+for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
+  IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')&&
+  IMAGE_URIS+=("${IMAGE_URI}")&&
+  REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3)&&
+  echo "[+] Repo Name ${REPO_NAME}" &&
+  REPO_NAMES+=("${REPO_NAME}");
 done
