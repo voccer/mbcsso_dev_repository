@@ -3,7 +3,7 @@
 version: 0.2
 
 env:
-  shell: zsh
+  shell: bash
 phases:
   install:
     commands:
@@ -17,7 +17,7 @@ phases:
       - LATEST_TAG="latest"
       - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
       - FUNCTION_NAMES=(${SYSTEM_NAME}_${ENV}_CommandFunction ${SYSTEM_NAME}_${ENV}_ProcessSQSFunction ${SYSTEM_NAME}_${ENV}_ProcessStreamFunction ${SYSTEM_NAME}_${ENV}_AuthFunction ${SYSTEM_NAME}_${ENV}_QueryFunction ${SYSTEM_NAME}_${ENV}_WaitSQSConsumer)
-      - FUNCTION_SRC_DIRS=("command" "process_sqs" "process_stream" "authorizer" "query" "process_wait")
+      - FUNCTION_SRC_DIRS="command process_sqs process_stream authorizer query process_wait"
 
       - aws --version
       # login to ECR
