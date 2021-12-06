@@ -25,10 +25,9 @@ phases:
 
       - IMAGE_URIS=()
       - REPO_NAMES=()
-      - x=$(aws lambda get-function --function-name ${SYSTEM_NAME}_${ENV}_CommandFunction | jq -r '.Code.ImageUri')
-      - echo $x
       - LEN=${#FUNCTION_SRC_DIRS[@]}
       - echo $LEN
+      - echo ${FUNCTION_SRC_DIRS[1]}
       - for (( i=0; i<$LEN; i++ )); do
         echo "[+] Building ${FUNCTION_SRC_DIRS[$i]} image";
         done
