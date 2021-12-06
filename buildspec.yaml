@@ -28,7 +28,7 @@ phases:
       - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
         IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')
         IMAGE_URIS+=("${IMAGE_URI}")
-        REPO_NAME=$(echo ${IMAGE_URI} | cut -d/ -f2)/$(echo ${IMAGE_URI} | cut -d/ -f3)
+        REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3)
         REPO_NAMES+=("${REPO_NAME}")
         done
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
