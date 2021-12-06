@@ -43,7 +43,7 @@ def lambda_handler(event, context):
 
     for record in event["Records"]:
         body = json.loads(record["body"])
-        for mess in json.loads(body["Messages"]):
+        for mess in json.loads(body["Message"]):
             system_id, tenant_id = mess["system_id"], mess["tenant_id"]
             event_name = mess["event_name"]
             data = mess["data"]
