@@ -23,8 +23,7 @@ def check_authorization(system_id, tenant_id, access_token, config_table_name, r
 
     if not response.get("Item"):
         return False
-    
-    
+
     keycloak_url = response["Item"]["keycloak_url"]["S"]
     keycloak_realm = response["Item"]["keycloak_realm"]["S"]
     print(keycloak_url, keycloak_realm)
@@ -38,13 +37,12 @@ def check_authorization(system_id, tenant_id, access_token, config_table_name, r
     r = requests.get(
         url=keycloak_userinfo_url, headers={"Authorization": f"Bearer {access_token}"}
     )
-    
 
     print("status code::" + str(r.status_code))
 
     if access_token != "secret":
         return False
-    
+
     # if r.status_code != 200:
     #     return False
 
@@ -57,18 +55,18 @@ def lambda_handler(event, context):
     env = os.environ.get("ENV", "dev")
     region = os.environ.get("REGION", "ap-northeast-1")
     config_table_name = "{}_{}_Config".format(name, env)
-    access_token = (event["headers"].get("authorization", ""),)
+    access_token = event["headers"].get("authorization", "")
 
     system_id, tenant_id = (
         event["queryStringParameters"].get("system_id", ""),
         event["queryStringParameters"].get("tenant_id", ""),
     )
-    
+
     response = {
         "isAuthorized": False,
         "context": {},
     }
-    
+
     is_authorized = check_authorization(
         system_id, tenant_id, access_token, config_table_name, region
     )
