@@ -1,0 +1,6 @@
+#! /bin/bash
+
+FUNCTION_SRC_DIRS=(command process_sqs process_stream authorizer query process_wait)
+for dir in "${!FUNCTION_SRC_DIRS[@]}"; do
+  echo "Building ${FUNCTION_SRC_DIRS[$dir]}..."
+done
