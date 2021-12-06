@@ -31,7 +31,7 @@ phases:
         IMAGE_URIS+="${IMAGE_URI} ";
 
         REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3);
-        REPO_NAME=$(echo ${REPO_NAME} | cut -d ":" -f 1);#remove tag
+        REPO_NAME=$(echo ${REPO_NAME} | cut -d ":" -f 1);
         REPO_NAMES+="${REPO_NAME} ";
         done
       - echo "[+] Image URIs $IMAGE_URIS"
