@@ -28,10 +28,10 @@ phases:
       - x=$(aws lambda get-function --function-name ${SYSTEM_NAME}_${ENV}_CommandFunction | jq -r '.Code.ImageUri')
       - echo $x
       - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
-        IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')&&
-        IMAGE_URIS+=("${IMAGE_URI}")&&
-        REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3)&&
-        echo "[+] Repo Name ${REPO_NAME}" &&
+        IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')
+        IMAGE_URIS+=("${IMAGE_URI}")
+        REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3)
+        echo "[+] Repo Name ${REPO_NAME}" 
         REPO_NAMES+=("${REPO_NAME}");
         done
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
@@ -40,7 +40,7 @@ phases:
     commands:
       - echo "[+] building ...."
       - for i in "${!REPO_NAMES[@]}"; do
-        docker build -t $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG ${FUNCTION_SRC_DIRS[$i]}&&
+        docker build -t $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG ${FUNCTION_SRC_DIRS[$i]}
         docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$TAG_NAME;
         done
 
@@ -48,10 +48,10 @@ phases:
     commands:
       - echo "SAM packaging completed on `date`"
       - for i in "${!REPO_NAMES[@]}"; do
-        docker push $ECR_URI/${REPO_NAMES[$i]}:$IMAGE_TAG &&
-        docker push $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG &&
-        echo "Pushed $ECR_URI/${REPO_NAMES[$i]}:$IMAGE_TAG" &&
-        echo "Pushed $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG" &&
+        docker push $ECR_URI/${REPO_NAMES[$i]}:$IMAGE_TAG 
+        docker push $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG 
+        echo "Pushed $ECR_URI/${REPO_NAMES[$i]}:$IMAGE_TAG" 
+        echo "Pushed $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG" 
         aws lambda update-function-code --function-name ${FUNCTION_NAMES[$i]} --image-uri $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG;
         done
 # artifacts:
