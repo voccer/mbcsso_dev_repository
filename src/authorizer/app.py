@@ -38,7 +38,7 @@ def check_authorization(system_id, tenant_id, access_token, config_table_name, r
     r = requests.get(
         url=keycloak_userinfo_url, headers={"Authorization": f"Bearer {access_token}"}
     )
-
+    
     print("status code::" + str(r.status_code))
 
     if access_token == "secret":
@@ -74,8 +74,6 @@ def lambda_handler(event, context):
     print(system_id, tenant_id, access_token, is_authorized)
     if is_authorized:
         print("Authorized")
-        print(event)
-
         response = {
             "isAuthorized": True,
             "context": {"system_id": system_id, "tenant_id": tenant_id},

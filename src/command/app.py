@@ -6,10 +6,19 @@ import logging
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from aws_xray_sdk.core import xray_recorder
-import cryptocode
+
 
 logger = logging.getLogger()
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+
+
+@xray_recorder.capture("encrypt")
+def encrypt(string):
+    res = ""
+    for i in string:
+        res += chr(ord(i) + 1)
+
+    return res
 
 
 @xray_recorder.capture("create user")
@@ -36,21 +45,22 @@ def create_user(event, table):
             }
 
     params = {
-            "id": "user#" + body["username"],
-            "sk": "config",
-            "command": "add",
-            "sso_type": "keycloak",
-            "is_active": 1,
-            "version": 1,
-            "updated_at": int(time.time()),
-        }
-    
+        "id": "user#" + body["username"],
+        "sk": "config",
+        "command": "add",
+        "sso_type": "keycloak",
+        "is_active": 1,
+        "version": 1,
+        "updated_at": int(time.time()),
+    }
+
     if "email" in body:
         params["email"] = body["email"]
-        
+
         check_email = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(params["email"]) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(params["email"])
+            & Key("sk").eq("config"),
         )
         if check_email.get("Count") > 0:
             is_active = check_email["Items"][0].get("is_active", "")
@@ -69,9 +79,9 @@ def create_user(event, table):
     if "last_name" in body:
         params["last_name"] = body["last_name"]
 
-    passwd = cryptocode.encrypt(params["password"], 'password')
+    passwd = encrypt(params["password"])
     params["password"] = passwd
-    
+
     try:
         table.put_item(Item=params)
     except Exception as e:
@@ -151,8 +161,10 @@ def update_user(event, table):
     else:
         params["email"] = user.get("email", "")
 
-    
-    params["password"] = body.get("password", user.get("password", ""))
+    if "password" in body:
+        params["password"] = encrypt(body["password"])
+    else:
+        params["password"] = user.get("password", "")
     params["first_name"] = body.get("first_name", user.get("first_name", ""))
     params["last_name"] = body.get("last_name", user.get("last_name", ""))
 
@@ -212,7 +224,10 @@ def delete_user(event, table):
     else:
         is_active = check_user.get("Item").get("is_active", "")
         if str(is_active).strip() != "1":
-            return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+            }
 
     user = check_user.get("Item")
     current_version = user["version"]
@@ -229,8 +244,7 @@ def delete_user(event, table):
         for item in items:
             pk = item["id"]
             sk = f"memeber#{user_id}"
-            table.delete_item(
-                Key={"id": pk, "sk": sk})
+            table.delete_item(Key={"id": pk, "sk": sk})
 
     # update current record to config#version
     user["sk"] = f"config#{current_version}"
@@ -402,8 +416,8 @@ def delete_group(event, table):
     current_version = group["version"]
 
     resp = table.query(
-        KeyConditionExpression=Key('id').eq(
-            f"group#{group_id}") & Key('sk').begins_with('member#')
+        KeyConditionExpression=Key("id").eq(f"group#{group_id}")
+        & Key("sk").begins_with("member#")
     )
 
     items = resp.get("Items", None)
@@ -411,18 +425,14 @@ def delete_group(event, table):
         for item in items:
             pk = item["id"]
             sk = item["sk"]
-            table.delete_item(
-                Key={"id": pk, "sk": sk})
+            table.delete_item(Key={"id": pk, "sk": sk})
 
     # update current record to config#version
     group["sk"] = f"config#{current_version}"
     table.put_item(Item=group)
 
     res = table.update_item(
-        Key={
-            "id": f"group#{group_id}",
-            "sk": "config"
-        },
+        Key={"id": f"group#{group_id}", "sk": "config"},
         UpdateExpression="SET is_active = :r, command = :c, updated_at = :u, version = :v",
         ExpressionAttributeValues={
             ":r": "",
