@@ -9,12 +9,15 @@ phases:
   pre_build:
     commands:
       - echo "[+] Running pre-build tasks"
-      - aws --version
-      - FUNCTION_NAMES=(mbcsso_dev_CommandFunction mbcsso_dev_ProcessSQSFunction mbcsso_dev_ProcessStreamFunction mbcsso_dev_AuthFunction mbcsso_dev_QueryFunction mbcsso_dev_WaitSQSConsumer)
-      - FUNCTION_SRC_DIRS=(command process_sqs process_stream authorizer query process_wait)
       - ACCOUNT_ID=465316005105
-      - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+      - SYSTEM_NAME=mbcsso
+      - ENV=dev
       - LATEST_TAG="latest"
+      - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+      - FUNCTION_NAMES=( ${SYSTEM_NAME}_${ENV}_CommandFunction ${SYSTEM_NAME}_${ENV}_ProcessSQSFunction ${SYSTEM_NAME}_${ENV}_ProcessStreamFunction ${SYSTEM_NAME}_${ENV}_AuthFunction ${SYSTEM_NAME}_${ENV}_QueryFunction ${SYSTEM_NAME}_${ENV}_WaitSQSConsumer )
+      - FUNCTION_SRC_DIRS=(command process_sqs process_stream authorizer query process_wait)
+      
+      - aws --version
       # login to ECR
       - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URI}
 
