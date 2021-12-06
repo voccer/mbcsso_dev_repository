@@ -30,6 +30,7 @@ def lambda_handler(event, context):
     account_id = os.environ.get("ACCOUNT_ID", "465316005105")
 
     client = boto3.client("sns")
+    
     response = client.publish(
         TargetArn=f"arn:aws:sns:{region}:{account_id}:{topic_name}",
         Message=json.dumps({"default": json.dumps(info)}),
