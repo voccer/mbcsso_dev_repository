@@ -26,6 +26,10 @@ def lambda_handler(event, context):
         elif record["eventName"] == "MODIFY":
             info["data"] = record["dynamodb"]["NewImage"]
 
+        if "sso_type" in info["data"]:
+            if info["data"]["sso_type"]["S"] != "keycloak":
+                continue
+            
         infos.append(info)
 
     topic_name = os.environ.get("TOPIC_NAME", "mbcsso_dev_topic")
