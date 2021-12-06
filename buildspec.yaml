@@ -3,7 +3,7 @@
 version: 0.2
 
 env:
-  shell: bash
+  shell: zsh
 phases:
   install:
     commands:
