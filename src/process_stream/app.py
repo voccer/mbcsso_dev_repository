@@ -26,10 +26,6 @@ def lambda_handler(event, context):
         elif record["eventName"] == "MODIFY":
             info["data"] = record["dynamodb"]["NewImage"]
 
-        if "sso_type" in info["data"]:
-            if info["data"]["sso_type"]["S"] != "keycloak":
-                continue
-            
         infos.append(info)
 
     topic_name = os.environ.get("TOPIC_NAME", "mbcsso_dev_topic")
@@ -40,7 +36,9 @@ def lambda_handler(event, context):
 
     response = client.publish(
         TargetArn=f"arn:aws:sns:{region}:{account_id}:{topic_name}",
-        Message=json.dumps({"default": json.dumps(infos)}),
+        Message=json.dumps(
+            {"default": json.dumps({"sso_type": "keycloak", "infos": infos})}
+        ),
         MessageStructure="json",
     )
 

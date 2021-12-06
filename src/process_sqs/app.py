@@ -43,7 +43,13 @@ def lambda_handler(event, context):
 
     for record in event["Records"]:
         body = json.loads(record["body"])
-        for mess in json.loads(body["Message"]):
+        
+        message = json.loads(body["Message"])
+        sso_type= message.get("sso_type","")
+        if sso_type != "keycloak":
+            continue
+        
+        for mess in message["infos"]:
             system_id, tenant_id = mess["system_id"], mess["tenant_id"]
             event_name = mess["event_name"]
             data = mess["data"]
@@ -57,7 +63,7 @@ def lambda_handler(event, context):
                 delete_data(table_name, data)
 
     ## TODO: sync data to keycloak
-
+    
     ## TODO: push to eventbridge
 
     return {
