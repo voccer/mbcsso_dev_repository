@@ -52,6 +52,7 @@ def check_authorization(system_id, tenant_id, access_token, config_table_name, r
 
 
 def lambda_handler(event, context):
+    print(f"authorizer event: {event}")
     name = os.environ.get("SYSTEM_NAME", "mbcsso")
     env = os.environ.get("ENV", "dev")
     region = os.environ.get("REGION", "ap-northeast-1")

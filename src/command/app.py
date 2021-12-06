@@ -151,6 +151,7 @@ def update_user(event, table):
     else:
         params["email"] = user.get("email", "")
 
+    
     params["password"] = body.get("password", user.get("password", ""))
     params["first_name"] = body.get("first_name", user.get("first_name", ""))
     params["last_name"] = body.get("last_name", user.get("last_name", ""))
