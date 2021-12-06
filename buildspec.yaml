@@ -27,7 +27,7 @@ phases:
       - REPO_NAMES=()
       - x=$(aws lambda get-function --function-name ${SYSTEM_NAME}_${ENV}_CommandFunction | jq -r '.Code.ImageUri')
       - echo $x
-      - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
+      - for FUNCTION_NAME in 1 2 3 4 5; do
         echo "[+] Building ${FUNCTION_NAME} image";
         done
       - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
