@@ -1,36 +1,27 @@
-#! /bin/bash
-MY_FUNC=mbcsso_dev_ProcessSQSFunction
-IMAGE_URI=$(aws lambda get-function --function-name $MY_FUNC | jq -r '.Code.ImageUri')
+ACCOUNT_ID=465316005105
+SYSTEM_NAME=mbcsso
+ENV=dev
+LATEST_TAG="latest"
+ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+FUNCTION_NAME=${SYSTEM_NAME}_${ENV}_ProcessSQSFunction
+FUNCTION_SRC_DIR="."
 
-# Set comma as delimiter
-IFS='/'
 
-read -a strarr <<< "$IMAGE_URI"
-CLOUD_URL=${strarr[0]}
-REPO_TAG_NAME=${strarr[1]}/${strarr[2]}
+# login to ECR
+aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URI}
 
-IFS=':'
-read -a strarr <<< "$REPO_TAG_NAME"
-REPO_NAME=${strarr[0]}
-CURRENT_TAG_NAME=${strarr[1]}
+IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')
 
-LATEST_TAG_NAME="latest"
+REPO_NAME=$(echo ${IMAGE_URI} | cut -d "/" -f 2)/$(echo ${IMAGE_URI} | cut -d "/" -f 3)
 
-TAG_NAME="1"
+COMMIT_HASH=$(echo "923hjh")
+IMAGE_TAG=${COMMIT_HASH:=latest}
+echo $IMAGE_TAG
 
-echo "CLOUD_URL: $CLOUD_URL"
-echo "REPO_NAME: $REPO_NAME"
-echo "TAG_NAME: $TAG_NAME"
+docker build -t $ECR_URI/$REPO_NAME:$LATEST_TAG $FUNCTION_SRC_DIR
+docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$IMAGE_TAG
 
-aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin $CLOUD_URL
+docker push $ECR_URI/$REPO_NAME:$IMAGE_TAG
+docker push $ECR_URI/$REPO_NAME:$LATEST_TAG
 
-docker build -t $CLOUD_URL/$REPO_NAME:$CURRENT_TAG_NAME .
-docker tag $CLOUD_URL/$REPO_NAME:$CURRENT_TAG_NAME $CLOUD_URL/$REPO_NAME:$TAG_NAME
-
-if [ "$CURRENT_TAG_NAME" != "$LATEST_TAG_NAME" ]; then
-  docker tag $CLOUD_URL/$REPO_NAME:$CURRENT_TAG_NAME $CLOUD_URL/$REPO_NAME:$LATEST_TAG_NAME
-fi
-docker push $CLOUD_URL/$REPO_NAME:$LATEST_TAG_NAME
-docker push $CLOUD_URL/$REPO_NAME:$TAG_NAME
-
-aws lambda update-function-code --function-name $MY_FUNC --image-uri "${CLOUD_URL}/${REPO_NAME}:${LATEST_TAG_NAME}" >> /dev/null
+aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $ECR_URI/$REPO_NAME:$LATEST_TAG

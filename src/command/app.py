@@ -6,7 +6,7 @@ import logging
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from aws_xray_sdk.core import xray_recorder
-
+import cryptocode
 
 logger = logging.getLogger()
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
@@ -35,32 +35,33 @@ def create_user(event, table):
                 ),
             }
 
-    email = body["email"]
-    check_email = table.query(
-        IndexName="UserEmailGSI",
-        KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
-    )
-    if check_email.get("Count") > 0:
-        is_active = check_email["Items"][0].get("is_active", "")
-        if str(is_active).strip() == "1":
-            return {
-                "statusCode": 400,
-                "body": json.dumps(
-                    {"code": "E_INVALID", "message": "email already exist"}
-                ),
-            }
-
     params = {
-        "id": "user#" + body["username"],
-        "sk": "config",
-        "command": "add",
-        "sso_type": "keycloak",
-        "is_active": 1,
-        "version": 1,
-        "updated_at": int(time.time()),
-    }
+            "id": "user#" + body["username"],
+            "sk": "config",
+            "command": "add",
+            "sso_type": "keycloak",
+            "is_active": 1,
+            "version": 1,
+            "updated_at": int(time.time()),
+        }
+    
     if "email" in body:
         params["email"] = body["email"]
+        
+        check_email = table.query(
+            IndexName="UserEmailGSI",
+            KeyConditionExpression=Key("email").eq(params["email"]) & Key("sk").eq("config"),
+        )
+        if check_email.get("Count") > 0:
+            is_active = check_email["Items"][0].get("is_active", "")
+            if str(is_active).strip() == "1":
+                return {
+                    "statusCode": 400,
+                    "body": json.dumps(
+                        {"code": "E_INVALID", "message": "email already exist"}
+                    ),
+                }
+
     if "password" in body:
         params["password"] = body["password"]  # ToDo: encrypt password
     if "first_name" in body:
@@ -68,6 +69,9 @@ def create_user(event, table):
     if "last_name" in body:
         params["last_name"] = body["last_name"]
 
+    passwd = cryptocode.encrypt(params["password"], 'password')
+    params["password"] = passwd
+    
     try:
         table.put_item(Item=params)
     except Exception as e:
