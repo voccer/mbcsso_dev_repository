@@ -96,7 +96,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/authorizer/
-      DockerTag: python3.8-v1
+      DockerTag: latest
 
   #kms
   # KmsKey:
@@ -186,7 +186,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/command
-      DockerTag: python3.8-v1
+      DockerTag: latest
   # function for query api
   QueryFunction:
     Type: AWS::Serverless::Function
@@ -247,7 +247,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/query
-      DockerTag: python3.8-v1
+      DockerTag: latest
 
   ProcessStreamFunction:
     Type: AWS::Serverless::Function
@@ -281,7 +281,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/process_stream
-      DockerTag: python3.8-v1
+      DockerTag: latest
 
   SQSQueue:
     Type: AWS::SQS::Queue
@@ -351,7 +351,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/process_sqs
-      DockerTag: python3.8-v1
+      DockerTag: latest
 
   # waiting functions for eventbridge
   WaitSQSConsumerFunction:
@@ -365,7 +365,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/process_wait
-      DockerTag: python3.8-v1
+      DockerTag: latest
 
   EventRule:
     Type: AWS::Events::Rule
