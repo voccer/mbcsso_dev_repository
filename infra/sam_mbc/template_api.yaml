@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  python3.8
+  python3.9
 
   Sam for API
 
@@ -95,7 +95,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/command
-      DockerTag: python3.8-v1
+      DockerTag: python3.9-v1
 
   QueryFunction:
     Type: AWS::Serverless::Function
@@ -155,7 +155,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/query
-      DockerTag: python3.8-v1
+      DockerTag: python3.9-v1
 
   # KmsKey:
   #   Type: AWS::KMS::Key
@@ -206,7 +206,7 @@ Resources:
   #   Metadata:
   #     Dockerfile: Dockerfile
   #     DockerContext: ./src/authorizer
-  #     DockerTag: python3.8-v1
+  #     DockerTag: python3.9-v1
 
   # permissions
   # ApiPermission:

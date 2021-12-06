@@ -49,7 +49,7 @@ Resources:
     Properties:
       CodeUri: src/authorizer/
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       FunctionName: AuthFunction
 
   HelloFunction:
@@ -57,7 +57,7 @@ Resources:
     Properties:
       CodeUri: src/hello_world/
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       FunctionName: HelloFunction
       Events:
         HelloWorldApi:

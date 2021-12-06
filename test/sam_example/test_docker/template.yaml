@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  python3.8
+  python3.9
 
   Sample SAM Template for test-docker
 
@@ -24,7 +24,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/hello_world
-      DockerTag: python3.8-v1
+      DockerTag: python3.9-v1
 
   HandleDbStreamFunction:
     Type: AWS::Serverless::Function # More info about
@@ -40,7 +40,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/handle_db_stream
-      DockerTag: python3.8-v1
+      DockerTag: python3.9-v1
 
   UserTable:
     Type: AWS::DynamoDB::Table

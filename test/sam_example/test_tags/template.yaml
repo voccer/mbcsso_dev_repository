@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  python3.8
+  python3.9
 
   Sample SAM Template for test-docker
 
@@ -27,7 +27,6 @@ Parameters:
     Default: dev
 
 Resources:
-  
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -45,7 +44,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./src/hello_world
-      DockerTag: python3.8-v1
+      DockerTag: python3.9-v1
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
