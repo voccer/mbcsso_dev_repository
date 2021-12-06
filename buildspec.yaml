@@ -44,7 +44,7 @@ phases:
       - for REPO_NAME in $(echo $REPO_NAMES | sed "s/ / /g"); do
         docker build -t $ECR_URI/$REPO_NAME:$LATEST_TAG $(echo $FUNCTION_SRC_DIRS | cut -d " " -f $i)));
         docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$TAG_NAME;
-        i=$((i+1))
+        i=$((i+1));
         done
 
   post_build:
@@ -57,7 +57,7 @@ phases:
         echo "Pushed $ECR_URI/$REPO_NAME:$IMAGE_TAG";
         echo "Pushed $ECR_URI/$REPO_NAME:$LATEST_TAG";
         aws lambda update-function-code --function-name $(echo $FUNCTION_NAMES | cut -d " " -f $i))) --image-uri $ECR_URI/$REPO_NAME:$LATEST_TAG;
-        i=$((i+1))
+        i=$((i+1));
         done
 # artifacts:
 #   files:
