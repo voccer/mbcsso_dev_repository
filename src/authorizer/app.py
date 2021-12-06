@@ -26,6 +26,7 @@ def check_authorization(system_id, tenant_id, access_token, config_table_name, r
 
     keycloak_url = response["Item"]["keycloak_url"]["S"]
     keycloak_realm = response["Item"]["keycloak_realm"]["S"]
+    
     print(keycloak_url, keycloak_realm)
 
     if not keycloak_url or not keycloak_realm:
