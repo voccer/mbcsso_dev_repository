@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  Serverless backend and REST API allowing users to configure personalized weekly updates about AWS products they find relevant.
+Globals:
+  Function:
+    Runtime: python2.7
+    MemorySize: 128
+    Timeout: 30
+    Environment:
+      Variables:
+        LOG_LEVEL: INFO
+        REGION: !Ref AWS::Region
+        TABLE_NAME: !Ref UserTable
+    DeadLetterQueue:
+      Type: SNS 
+      TargetArn: !Ref DLQNotificationTopic
+
+Parameters:
+  DDBThroughput:
+    Description: Capacity for the DDB table
+    Type: Number
+    Default: 1
+  Stage:
+    Description: A unique identifier for the deployment
+    Type: String
+    Default: dev
+  SenderEmail:
+    Description: The email address to send weekly updates from (must be AWS SES-verified)
+    Type: String
+  VerifiedSenderArn:
+    Description: The verified SES ARN (OPTIONAL unless the source account is still in SES sandbox)
+    Type: String
+    Default: ""
+  HostedZoneName: 
+    Description: The hosted zone to place the API Gateway record in (OPTIONAL)
+    Type: String
+    Default: ""
+  CertificateArn:
+    Description: The ACM Certificate ARN (OPTIONAL unless HostedZoneName is specified)
+    Type: String
+    Default: ""
+
+Conditions:
+  HasDNS: !Not [!Equals [ !Ref HostedZoneName, "" ]]
+
+    
+Resources:
+  users:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: ./functions
+      Handler: users.lambda_handlerapi
+      Description: >-
+        Handles CRUD operations on users
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${UserTable}
+      Events:
+        Users:
+          Type: Api
+          Properties:
+            Path: /users
+            Method: ANY
+        Services:
+          Type: Api
+          Properties:
+            Path: /services
+            Method: GET
+        User:
+          Type: Api
+          Properties:
+            Path: /users/{user}
+            Method: ANY
+        UserServices:
+          Type: Api
+          Properties:
+            Path: /users/{user}/services
+            Method: ANY
+
+  fanout:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: fanout.lambda_handler
+      CodeUri: ./functions
+      Description: >-
+        Reads AWS RSS feed and spawns async Lambda invocations to send user emails
+      Timeout: 900
+      MemorySize: 512
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${UserTable}
+            - Effect: Allow
+              Action:
+                - events:Put*
+              Resource: '*'
+      Events:
+        WeeklyEmailRule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 8 ? * MON *)
+
+  emailer:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: ./functions
+      Handler: emailer.lambda_handler
+      Environment:
+        Variables:
+          AWS_RSS_URL: https://aws.amazon.com/new/feed/
+          SENDER_EMAIL: !Ref SenderEmail
+          VERIFIED_SENDER_ARN: !Ref VerifiedSenderArn
+      Description: >-
+        Sends personalized AWS product update emails to a given user
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ses:Send*
+              Resource: '*'
+      Events:
+        FanoutConsumer:
+          Type: CloudWatchEvent
+          Properties:
+            Pattern:
+              source: 
+                - "whatsnew.rss.fanout"
+
+  UserTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: username
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref DDBThroughput
+        WriteCapacityUnits: !Ref DDBThroughput
+
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasDNS
+    Properties:
+      HostedZoneName: !Sub ${HostedZoneName}.
+      Name: !Sub ${Stage}.${HostedZoneName}.
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+      - !GetAtt ApiGatewayDomainName.RegionalDomainName
+      SetIdentifier: !Ref AWS::Region
+      Region: !Ref AWS::Region
+
+  ApiGatewayDomainName:
+    Type: "AWS::ApiGateway::DomainName"
+    Condition: HasDNS
+    Properties:
+      RegionalCertificateArn: !Ref CertificateArn
+      DomainName: !Sub ${Stage}.${HostedZoneName}
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiGatewayBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Condition: HasDNS
+    Properties:
+      BasePath: ""
+      DomainName: !Ref ApiGatewayDomainName
+      RestApiId: !Ref ServerlessRestApi
+      Stage: !Ref ServerlessRestApiProdStage
+  
+  DLQNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: DLQNotifications
+      TopicName: !Sub ${AWS::StackName}DLQNotifications
+
+Outputs:
+  APIEndpoint:
+    Description: URL for API Gateway
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/MyResource/

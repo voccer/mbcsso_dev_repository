@@ -1,0 +1,130 @@
+#################################
+# .gitlab-ci.yml (SINGLE ACCOUNT)
+# 
+# DESCRIPTION
+# Branch-based GitLab deployments of an associated SAM template in a single AWS account.
+#
+# USAGE
+# 1. Update the "variables" section of this file with your AWS account-specific info.
+# 2. Push changes to your SAM application in GitLab!
+#
+#################################
+
+variables:
+  ACCOUNT: "123456789012" #12-digit account ID for your AWS environment
+  REGION: us-east-2 #Deployment AWS region for your environment
+  CI_BUCKET: gitlab-ci-bucket #An S3 bucket accessible to your GitLab runner
+  SES_SENDER_ADDRESS: email@yourcompany.com #SES-verified email address to send weekly emails from
+  image: lambci/lambda #Docker image to use for build jobs - should have Python 3 installed
+  SAM_TEMPLATE_FILE_NAME: sam.yml #The name of the SAM template file for the application
+  VERIFIED_SES_SENDER: arn:aws:ses:${REGION}:${ACCOUNT}:identity/{SES_SENDER_ADDRESS} #OPTIONAL - only needed if your account is still in the SES sandbox
+  # HOSTED_ZONE_NAME: mydomain.company.com #OPTIONAL - only needed if you want a DNS name for your review apps. Don't include trailing dot
+  # ACM_CERT_ARN: arn:aws:acm:us-east-1:123456789012:certificate/asdf-asdf-asdf-asdf #OPTIONAL - only needed if you want a DNS name for your review apps.
+
+cache:
+  key: ${CI_COMMIT_REF_NAME}
+  untracked: true
+
+stages:
+  - test
+  - build
+  - deploy
+
+.build_script: &build_script
+  script: |
+    echo "===== building Lambda package ====="
+    if test -f requirements.txt; then
+      pip install -t functions/ -r requirements.txt
+    fi
+    aws cloudformation package --template-file ${SAM_TEMPLATE_FILE_NAME} --s3-bucket ${CI_BUCKET} --output-template-file deployment.yml
+
+.deploy_script: &deploy_script
+  script: |
+    echo "===== executing changeset for stack ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME} in ${CI_ENVIRONMENT_NAME} environment ====="
+    aws cloudformation deploy \
+    --stack-name ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME} \
+    --template-file ${CI_PROJECT_DIR}/deployment.yml \
+    --role-arn ${DEPLOYMENT_ROLE} \
+    --no-fail-on-empty-changeset \
+    --parameter-overrides \
+      HostedZoneName="${HOSTED_ZONE_NAME}" \
+      Stage="${CI_COMMIT_REF_NAME}" \
+      CertificateArn="${ACM_CERT_ARN}" \
+      VerifiedSenderArn="${VERIFIED_SES_SENDER}" \
+      SenderEmail="${SES_SENDER_ADDRESS}" \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --tags Stage=${CI_COMMIT_REF_NAME} 
+    ./cfn-wait.sh ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME} ${REGION}
+
+.shutdown_script: &shutdown_script
+  script: |
+    echo "===== Deleting stack ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME} ====="
+    ls
+    aws cloudformation delete-stack --stack-name ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME} --region ${REGION}
+    ./cfn-wait.sh ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME} ${REGION}
+
+test:unit:
+  stage: test
+  only:
+    - branches
+  script: |
+    if test -f package.json; then
+      npm install --loglevel error;
+      npm run test;
+    elif test -f requirements.txt; then
+        pip install -r requirements.txt
+        python -m pytest --ignore=functions/
+    elif test -f pom.xml; then
+        mvn verify
+    else
+      echo "no test file found to run tests from";
+    fi
+
+dependency_scanning:
+  stage: test
+  image: docker:stable
+  variables:
+    DOCKER_DRIVER: overlay2
+  allow_failure: true
+  services:
+    - docker:stable-dind
+  script:
+    - export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
+    - echo $PWD
+    - docker run
+        --env DEP_SCAN_DISABLE_REMOTE_CHECKS="${DEP_SCAN_DISABLE_REMOTE_CHECKS:-false}"
+        --volume "$PWD:/code"
+        --volume /var/run/docker.sock:/var/run/docker.sock
+        "registry.gitlab.com/gitlab-org/security-products/dependency-scanning:$SP_VERSION" .
+  artifacts:
+    paths: [gl-dependency-scanning-report.json]
+
+build:
+  stage: build
+  <<: *build_script
+  artifacts:
+    paths:
+      - deployment.yml
+    expire_in: 1 week
+
+deploy:
+  <<: *deploy_script
+  stage: deploy
+  dependencies: 
+    - build:dev
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    url: https://${CI_COMMIT_REF_NAME}.${HOSTED_ZONE_NAME}/services
+    on_stop: stop
+
+stop:
+  stage: deploy
+  <<: *shutdown_script
+  when: manual
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    action: stop
+  only:
+    - branches
+  except:
+    - master

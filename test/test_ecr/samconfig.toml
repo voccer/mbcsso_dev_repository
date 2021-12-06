@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "test-ecr"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-15wy90y4nj0it"
+s3_prefix = "test-ecr"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_IAM"
+image_repositories = ["ECRTestFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/testecr1c3b47fa/ecrtestfunctionbd62314brepo"]

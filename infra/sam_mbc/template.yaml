@@ -1,0 +1,417 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+
+  Sam for sso
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    Environment:
+      Variables:
+        REGION: !Ref Region
+        ENV: !Ref Env
+        SYSTEM_NAME: !Ref SystemName
+Parameters:
+  Region:
+    Type: String
+    Default: ap-northeast-1
+  SystemName:
+    Type: String
+    Default: mbcsso
+  Env:
+    Type: String
+    Default: dev
+  RetentionInDays:
+    Type: Number
+    Default: 180
+  ReadCapacityUnits:
+    Type: Number
+    Default: 5
+  WriteCapacityUnits:
+    Type: Number
+    Default: 5
+
+Resources:
+  ApiLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub ${SystemName}_${Env}_api_log_group
+      RetentionInDays: !Ref RetentionInDays
+      Tags:
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: Env
+          Value: !Ref Env
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Env
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","requestTime":"$context.requestTime", "routeKey":"$context.routeKey", "status":"$context.status", "error": "$context.authorizer.error"}'
+      Auth:
+        DefaultAuthorizer: LambdaRequestAuthorizer
+        Authorizers:
+          LambdaRequestAuthorizer:
+            FunctionArn: !GetAtt AuthFunction.Arn
+            Identity:
+              Headers:
+                - Authorization
+            AuthorizerPayloadFormatVersion: 2.0
+            EnableSimpleResponses: true
+            FunctionPayloadType: REQUEST
+      Tags:
+        Name: !Ref SystemName
+        Env: !Ref Env
+
+  # permissions
+  ApiPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt AuthFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/authorizers/*'
+
+  # authorizer function
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub ${SystemName}_${Env}_AuthFunction
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub ${SystemName}_${Env}_Config
+        - KMSDecryptPolicy:
+            KeyId: '*'
+        - KMSEncryptPolicy:
+            KeyId: '*'
+      Tags:
+        Name: !Ref SystemName
+        Env: !Ref Env
+
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./src/authorizer/
+      DockerTag: python3.8-v1
+
+  #kms
+  # KmsKey:
+  #   Type: AWS::KMS::Key
+  #   Properties:
+  #     Description: CMK for encrypting and decrypting
+  #     KeyPolicy:
+  #       Version: '2012-10-17'
+  #       Id: key-default
+  #       Statement:
+  #         - Sid: Enable IAM User Permissions
+  #           Effect: Allow
+  #           Principal:
+  #             AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+  #           Action: kms:*
+  #           Resource: '*'
+
+  # function for command api
+  CommandFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub ${SystemName}_${Env}_CommandFunction
+      Description: !Sub 'command function for ${SystemName}_${Env}'
+      Tracing: Active
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub ${SystemName}_${Env}_*_*_user_commands
+        - DynamoDBReadPolicy:
+            TableName: !Sub ${SystemName}_${Env}_Config
+        - AWSXRayDaemonWriteAccess
+      Events:
+        AddUser:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users
+            Method: POST
+        UpdateUser:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users/{user_id}
+            Method: PUT
+        DeleteUser:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users/{user_id}
+            Method: DELETE
+        # groups
+        AddGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups
+            Method: POST
+        UpdateGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{group_id}
+            Method: PUT
+        DeleteGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{group_id}
+            Method: DELETE
+
+        # users in group
+        AddGroupMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users/{user_id}/groups/{group_id}
+            Method: PUT
+        DeleteGroupMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users/{user_id}/groups/{group_id}
+            Method: delete
+      Tags:
+        Name: !Ref SystemName
+        Env: !Ref Env
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./src/command
+      DockerTag: python3.8-v1
+  # function for query api
+  QueryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub ${SystemName}_${Env}_QueryFunction
+      Description: !Sub 'query function for ${SystemName}_${Env}'
+      Tracing: Active
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub ${SystemName}_${Env}_*_*_users
+        - DynamoDBReadPolicy:
+            TableName: !Sub ${SystemName}_${Env}_Config
+        - AWSXRayDaemonWriteAccess
+        # - Statement:
+        #     - Sid: AllowXray
+        #       Effect: Allow
+        #       Action:
+        #         - xray:PutTraceSegments
+        #         - xray:PutTelemetryRecords
+        #       Resource:
+        #         - '*'
+      Events:
+        GetUser:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users/{user_id}
+            Method: GET
+        SearchUser:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users
+            Method: GET
+        #group
+        GetGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{group_id}
+            Method: GET
+        SearchGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups
+            Method: GET
+        SearchUserGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /users/{user_id}/groups
+            Method: GET
+      Tags:
+        Name: !Ref SystemName
+        Env: !Ref Env
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./src/query
+      DockerTag: python3.8-v1
+
+  ProcessStreamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub ${SystemName}_${Env}_ProcessStreamFunction
+      Policies:
+        - DynamoDBStreamReadPolicy:
+            TableName: !Sub ${SystemName}_${Env}_*_*_user_commands
+            StreamName: '*' # arn of stream
+        - DynamoDBCrudPolicy:
+            TableName: !Sub ${SystemName}_${Env}_*_*_users
+        - DynamoDBReadPolicy:
+            TableName: !Sub ${SystemName}_${Env}_Config
+        - SNSCrudPolicy:
+            TopicName: !GetAtt SNSTopic.TopicName
+      Environment:
+        Variables:
+          TopicName: !GetAtt SNSTopic.TopicName
+
+      # Events:
+      #   Stream:
+      #     Type: DynamoDB
+      #     Properties:
+      #       Stream: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SystemName}_${Env}_*_*_user_commands/stream/*
+      #       BatchSize: 100
+      #       StartingPosition: TRIM_HORIZON
+      Tags:
+        Name: !Ref SystemName
+        Env: !Ref Env
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./src/process_stream
+      DockerTag: python3.8-v1
+
+  SQSQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${SystemName}_${Env}_queue
+      Tags:
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: env
+          Value: !Ref Env
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${SystemName}_${Env}_topic
+      Subscription:
+        - Protocol: sqs
+          Endpoint: !GetAtt SQSQueue.Arn
+      Tags:
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: env
+          Value: !Ref Env
+
+  # Policy allows SNS to publish to this SQS queue
+  SnsToSqsPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Sid: 'Allow SNS publish to SQS'
+            Effect: Allow
+            Principal: '*'
+            Resource: !GetAtt SQSQueue.Arn
+            Action: SQS:SendMessage
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref SNSTopic
+      Queues:
+        - !Ref SQSQueue
+
+  ProcessSQSFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub ${SystemName}_${Env}_ProcessSQSFunction
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub ${SystemName}_${Env}_*_*_users
+        - DynamoDBReadPolicy:
+            TableName: !Sub ${SystemName}_${Env}_Config
+        - KMSDecryptPolicy:
+            KeyId: '*'
+        - KMSEncryptPolicy:
+            KeyId: '*'
+        - EventBridgePutEventsPolicy:
+            EventBusName: '*'
+
+      Events:
+        SQSQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SQSQueue.Arn
+      Tags:
+        Name: !Ref SystemName
+        Env: !Ref Env
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./src/process_sqs
+      DockerTag: python3.8-v1
+
+  # waiting functions for eventbridge
+  WaitSQSConsumerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub ${SystemName}_${Env}_WaitSQSConsumer
+      Tags:
+        Name: !Ref SystemName
+        Env: !Ref Env
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./src/process_wait
+      DockerTag: python3.8-v1
+
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: 'Event rule is waiting'
+      EventPattern:
+        source:
+          - 'demo.event'
+        detail-type:
+          - transaction
+        detail:
+          result:
+            - 'approved'
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt WaitSQSConsumerFunction.Arn
+          Id: 'WaitingConsumer'
+
+  # permission to invoke function from event
+  EventPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WaitSQSConsumerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventRule.Arn
+  ## dynamodb config table
+  ConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${SystemName}_${Env}_Config
+      AttributeDefinitions:
+        - AttributeName: system_id
+          AttributeType: S
+        - AttributeName: tenant_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: system_id
+          KeyType: HASH
+        - AttributeName: tenant_id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      Tags:
+        - Key: SystemName
+          Value: !Ref SystemName
+        - Key: env
+          Value: !Ref Env

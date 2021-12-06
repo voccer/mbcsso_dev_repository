@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "sam-sso"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-15wy90y4nj0it"
+s3_prefix = "sam-sso"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Region=\"ap-northeast-1\" SystemName=\"mbcsso\" Env=\"dev\" RetentionInDays=\"180\" ReadCapacityUnits=\"5\" WriteCapacityUnits=\"5\""
+image_repositories = ["AuthFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samssobfd0c93c/authfunctiona88a6b13repo", "CommandFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samssobfd0c93c/commandfunctioncb0fda33repo", "QueryFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samssobfd0c93c/queryfunction87654789repo", "ProcessStreamFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samssobfd0c93c/processstreamfunctionb8381f90repo", "ProcessSQSFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samssobfd0c93c/processsqsfunctione995b6c6repo", "WaitSQSConsumerFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samssobfd0c93c/waitsqsconsumerfunction873ce1cerepo"]

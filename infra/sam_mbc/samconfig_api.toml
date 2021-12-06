@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "sam-api"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-15wy90y4nj0it"
+s3_prefix = "sam-api"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "RetentionInDays=\"180\""
+image_repositories = ["CommandFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samapixrayd46ff387/commandfunctioncb0fda33repo", "QueryFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/samapixrayd46ff387/queryfunction87654789repo"]

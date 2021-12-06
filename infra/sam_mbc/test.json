@@ -1,0 +1,57 @@
+{
+  "version": "2.0",
+  "routeKey": "PUT /groups/{group_id}",
+  "rawPath": "/dev/groups/123",
+  "rawQueryString": "",
+  "headers": {
+    "accept": "*/*",
+    "accept-encoding": "gzip, deflate, br",
+    "authorization": "secret",
+    "content-length": "64",
+    "content-type": "application/json",
+    "host": "mzx9lelho4.execute-api.ap-northeast-1.amazonaws.com",
+    "postman-token": "d687e5de-e59f-42a2-9605-25ff9a17be0f",
+    "user-agent": "PostmanRuntime/7.28.4",
+    "x-amzn-trace-id": "Root=1-61a6f46a-3db09c234d35a59e782092a9",
+    "x-forwarded-for": "118.70.32.198",
+    "x-forwarded-port": "443",
+    "x-forwarded-proto": "https"
+  },
+  "requestContext": {
+    "accountId": "465316005105",
+    "apiId": "mzx9lelho4",
+    "authorizer": {
+      "lambda": {
+        "arrayKey": [
+          "array_key_1",
+          "array_key_2"
+        ],
+        "booleanKey": True,
+        "mapKey": {
+          "map_key_value1": "map_key_value2"
+        },
+        "numberKey": 1,
+        "stringKey": "value"
+      }
+    },
+    "domainName": "mzx9lelho4.execute-api.ap-northeast-1.amazonaws.com",
+    "domainPrefix": "mzx9lelho4",
+    "http": {
+      "method": "PUT",
+      "path": "/dev/groups/123",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "118.70.32.198",
+      "userAgent": "PostmanRuntime/7.28.4"
+    },
+    "requestId": "JpsgsjKCtjMEJIQ=",
+    "routeKey": "PUT /groups/{group_id}",
+    "stage": "dev",
+    "time": "01/Dec/2021:04:04:58 +0000",
+    "timeEpoch": 1638331498694
+  },
+  "pathParameters": {
+    "group_id": "123"
+  },
+  "body": "{\n    "id": "123",\n    "uname": "ntduc",\n    "password": "duc"\n}",
+  "isBase64Encoded": False
+}

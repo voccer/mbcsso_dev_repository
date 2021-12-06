@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "test-app"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1dvl4r4xmg2jt"
+s3_prefix = "test-app"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_IAM"
+image_repositories = ["HelloWorldFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/testapp42bd24fc/helloworldfunction19d43fc4repo", "ProcessDynamoDBStream=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/testapp42bd24fc/processdynamodbstreamf81e39e9repo"]
