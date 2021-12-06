@@ -25,9 +25,6 @@ phases:
 
       - IMAGE_URIS=()
       - REPO_NAMES=()
-      - for TENANT in $(echo $FUNCTION_SRC_DIRS | sed "s/ / /g"); do
-        echo $TENANT;
-        done
       - for FUNCTION_NAME in $(echo $FUNCTION_NAMES | sed "s/ / /g"); do
         echo $FUNCTION_NAME;
         IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri');
@@ -36,6 +33,8 @@ phases:
         echo "[+] Repo Name ${REPO_NAME}";
         REPO_NAMES+=("${REPO_NAME}");
         done
+      - echo "[+] Image URIs: $IMAGE_URIS"
+      - echo "[+] Repo Names: $REPO_NAMES"
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
   build:
