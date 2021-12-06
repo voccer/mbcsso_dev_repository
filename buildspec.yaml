@@ -61,11 +61,6 @@ phases:
         aws lambda update-function-code --function-name $(echo $FUNCTION_NAMES | cut -d " " -f $i) --image-uri $ECR_URI/$REPO_NAME:$LATEST_TAG;
         i=$((i+1));
         done
-# artifacts:
-#   files:
-#     - packaged.yaml
-#   discard-paths: yes
-
-# cache:
-#   paths:
-#     - '/root/.cache/pip'
+artifacts:
+  files:
+    - image_detail.json
