@@ -37,15 +37,14 @@ def delete_data(table_name, data):
 
 
 def lambda_handler(event, context):
-    print("process sqs2")
+    print(f"process sqs event: {event}")
     system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
     env = os.environ.get("ENV", "dev")
 
     for record in event["Records"]:
         body = json.loads(record["body"])
-        
         for mess in json.loads(body["Message"]):
-            print(mess)
+            print(f"process sqs message: {mess}")
             system_id, tenant_id = mess["system_id"], mess["tenant_id"]
             event_name = mess["event_name"]
             data = mess["data"]
