@@ -36,15 +36,16 @@ phases:
         done
       - echo "[+] Image URIs $IMAGE_URIS"
       - echo "[+] Repo Names $REPO_NAMES"
-      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-8)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - echo $IMAGE_TAG
   build:
     commands:
       - echo "[+] building ...."
       - i=1
       - for REPO_NAME in $(echo $REPO_NAMES | sed "s/ / /g"); do
         docker build -t $ECR_URI/$REPO_NAME:$LATEST_TAG $(echo $FUNCTION_SRC_DIRS | cut -d " " -f $i);
-        docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$TAG_NAME;
+        docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$IMAGE_TAG;
         i=$((i+1));
         done
 
