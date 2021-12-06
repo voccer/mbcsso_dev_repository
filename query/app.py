@@ -166,8 +166,46 @@ def get_group(event, table):
 
 
 @xray_recorder.capture("search user_group")
-def search_user_group(event):
-    return {"statusCode": 200, "body": json.dumps({"msg": "search user_group"})}
+def search_user_group(event, table):
+    path_params = event.get("pathParameters", "")
+    print(f"params:: {path_params}")
+    if path_params == "":
+        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+    if "user_id" not in path_params:
+        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+
+    user_id = path_params["user_id"]
+
+    check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
+    if check_user.get("Item", None) is None:
+        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "user not exist"})}
+    else:
+        is_active = check_user.get("Item").get("is_active", "")
+        if str(is_active).strip() != "1":
+            return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "user invalid"})}
+
+    resp = table.query(
+        IndexName="UserGroupGSI",
+        KeyConditionExpression=Key('member_id').eq(
+            f"member#{user_id}") & Key('id').begins_with('group#')
+    )
+    items = resp.get("Items", None)
+    print(f"Items:: {items}")
+    data = []
+    if items is not None:
+        for item in items:
+            pk = item["id"]
+            sk = f"config"
+            print(f"id:: {pk}, sk:: {sk}")
+            group_resp = table.get_item(
+                Key={"id": pk, "sk": sk})
+            group = group_resp.get("Item", None)
+            if group is not None:
+                data.append({
+                    "groupname": group["id"][6:],
+                    "description": group.get("description", "")
+                })
+    return {"statusCode": 200, "body": json.dumps({"code": "ok", "data": data})}
 
 
 @xray_recorder.capture("get user/group")

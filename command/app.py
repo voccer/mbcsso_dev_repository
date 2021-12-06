@@ -169,30 +169,24 @@ def delete_user(event, table):
         is_active = check_user.get("Item").get("is_active", "")
         if str(is_active).strip() != "1":
             return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
-    # try:
-    #     current_version = check_user["version"]
 
-    #     # update current record to config#version
-    #     check_user["sk"] = f"config#{current_version}"
-    #     table.put_item(Item=check_user)
-    #     resp = table.update_item(
-    #         Key={
-    #             "id": f"user#{user_id}",
-    #             "sk": "config"
-    #         },
-    #         UpdateExpression="SET is_active = :r, command = :p, updated_at = :u, version = :v",
-    #         ExpressionAttributeValues={
-    #             ":r": "",
-    #             ":p": "delete",
-    #             ":v": f"{int(current_version) + 1}",
-    #             ":u": int(time.time())
-    #         },
-    #         ReturnValues="UPDATED_NEW"
-    #     )
-    # except:
-    #     pass
     user = check_user.get("Item")
     current_version = user["version"]
+
+    # delete linked user group
+    resp = table.query(
+        IndexName="UserGroupGSI",
+        KeyConditionExpression=Key('sk').eq(
+            f"memeber#{user_id}") & Key('id').begins_with('group#')
+    )
+
+    items = resp.get("Items", None)
+    if items is not None:
+        for item in items:
+            pk = item["id"]
+            sk = f"memeber#{user_id}"
+            table.delete_item(
+                Key={"id": pk, "sk": sk})
 
     # update current record to config#version
     user["sk"] = f"config#{current_version}"
@@ -323,11 +317,24 @@ def delete_group(event, table):
     group = check_group.get("Item")
     current_version = group["version"]
 
+    resp = table.query(
+        KeyConditionExpression=Key('id').eq(
+            f"group#{group_id}") & Key('sk').begins_with('member#')
+    )
+
+    items = resp.get("Items", None)
+    if items is not None:
+        for item in items:
+            pk = item["id"]
+            sk = item["sk"]
+            table.delete_item(
+                Key={"id": pk, "sk": sk})
+
     # update current record to config#version
     group["sk"] = f"config#{current_version}"
     table.put_item(Item=group)
 
-    resp = table.update_item(
+    res = table.update_item(
         Key={
             "id": f"group#{group_id}",
             "sk": "config"

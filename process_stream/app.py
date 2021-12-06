@@ -3,7 +3,7 @@ import boto3
 
 
 def lambda_handler(event, context):
-    info = []
+    info = {}
     for record in event["Records"]:
         info["event_name"] = record["eventName"]
         ddb_arn = record["eventSourceARN"]
