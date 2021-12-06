@@ -1,0 +1,56 @@
+# Buildspec Reference Doc: https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "[+] Scanning for security vulnerability within dependencies"
+  pre_build:
+    commands:
+      - echo "[+] Running pre-build tasks"
+      - aws --version
+      - FUNCTION_NAMES=(mbcsso_dev_CommandFunction mbcsso_dev_ProcessSQSFunction mbcsso_dev_ProcessStreamFunction mbcsso_dev_AuthFunction mbcsso_dev_QueryFunction mbcsso_dev_WaitSQSConsumer)
+      - FUNCTION_SRC_DIRS=(command process_sqs process_stream authorizer query process_wait)
+      - ACCOUNT_ID=465316005105
+      - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+      - LATEST_TAG="latest"
+      # login to ECR
+      - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URI}
+
+      - IMAGE_URIS=()
+      - REPO_NAMES=()
+      - for FUNCTION_NAME in "${FUNCTION_NAMES[@]}"; do
+        IMAGE_URI=$(aws lambda get-function --function-name $FUNCTION_NAME | jq -r '.Code.ImageUri')
+        IMAGE_URIS+=("${IMAGE_URI}")
+        REPO_NAME=$(echo ${IMAGE_URI} | cut -d/ -f2)/$(echo ${IMAGE_URI} | cut -d/ -f3)
+        REPO_NAMES+=("${REPO_NAME}")
+        done
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+  build:
+    commands:
+      - echo "[+] building ...."
+      - for i in "${!REPO_NAMES[@]}"; do
+        docker build -t $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG ${FUNCTION_SRC_DIRS[$i]}
+        docker tag $ECR_URI/$REPO_NAME:$LATEST_TAG $ECR_URI/$REPO_NAME:$TAG_NAME
+        done
+
+  post_build:
+    commands:
+      - echo "SAM packaging completed on `date`"
+      - for i in "${!REPO_NAMES[@]}"; do
+        docker push $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG
+        aws lambda update-function-code --function-name ${FUNCTION_NAMES[$i]} --image-uri $ECR_URI/${REPO_NAMES[$i]}:$LATEST_TAG
+        done
+      # - docker push $IMAGE_LATEST
+      # - docker push $IMAGE_TAG
+      # - aws lambda update-function-code --function-name $MY_FUNC --image-uri $IMAGE_URI >> /dev/null
+# artifacts:
+#   files:
+#     - packaged.yaml
+#   discard-paths: yes
+
+# cache:
+#   paths:
+#     - '/root/.cache/pip'
