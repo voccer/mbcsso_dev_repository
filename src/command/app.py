@@ -207,10 +207,14 @@ def delete_user(event, table):
     else:
         is_active = check_user.get("Item").get("is_active", "")
         if str(is_active).strip() != "1":
+<<<<<<< HEAD:src/command/app.py
             return {
                 "statusCode": 400,
                 "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
             }
+=======
+            return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+>>>>>>> 6ef41dc34a2e8ec9b8fbb1dcebc73b0e6be89839:command/app.py
 
     user = check_user.get("Item")
     current_version = user["version"]
@@ -218,8 +222,13 @@ def delete_user(event, table):
     # delete linked user group
     resp = table.query(
         IndexName="UserGroupGSI",
+<<<<<<< HEAD:src/command/app.py
         KeyConditionExpression=Key("sk").eq(f"memeber#{user_id}")
         & Key("id").begins_with("group#"),
+=======
+        KeyConditionExpression=Key('sk').eq(
+            f"memeber#{user_id}") & Key('id').begins_with('group#')
+>>>>>>> 6ef41dc34a2e8ec9b8fbb1dcebc73b0e6be89839:command/app.py
     )
 
     items = resp.get("Items", None)
@@ -227,7 +236,12 @@ def delete_user(event, table):
         for item in items:
             pk = item["id"]
             sk = f"memeber#{user_id}"
+<<<<<<< HEAD:src/command/app.py
             table.delete_item(Key={"id": pk, "sk": sk})
+=======
+            table.delete_item(
+                Key={"id": pk, "sk": sk})
+>>>>>>> 6ef41dc34a2e8ec9b8fbb1dcebc73b0e6be89839:command/app.py
 
     # update current record to config#version
     user["sk"] = f"config#{current_version}"
@@ -399,8 +413,13 @@ def delete_group(event, table):
     current_version = group["version"]
 
     resp = table.query(
+<<<<<<< HEAD:src/command/app.py
         KeyConditionExpression=Key("id").eq(f"group#{group_id}")
         & Key("sk").begins_with("member#")
+=======
+        KeyConditionExpression=Key('id').eq(
+            f"group#{group_id}") & Key('sk').begins_with('member#')
+>>>>>>> 6ef41dc34a2e8ec9b8fbb1dcebc73b0e6be89839:command/app.py
     )
 
     items = resp.get("Items", None)
@@ -408,14 +427,26 @@ def delete_group(event, table):
         for item in items:
             pk = item["id"]
             sk = item["sk"]
+<<<<<<< HEAD:src/command/app.py
             table.delete_item(Key={"id": pk, "sk": sk})
+=======
+            table.delete_item(
+                Key={"id": pk, "sk": sk})
+>>>>>>> 6ef41dc34a2e8ec9b8fbb1dcebc73b0e6be89839:command/app.py
 
     # update current record to config#version
     group["sk"] = f"config#{current_version}"
     table.put_item(Item=group)
 
     res = table.update_item(
+<<<<<<< HEAD:src/command/app.py
         Key={"id": f"group#{group_id}", "sk": "config"},
+=======
+        Key={
+            "id": f"group#{group_id}",
+            "sk": "config"
+        },
+>>>>>>> 6ef41dc34a2e8ec9b8fbb1dcebc73b0e6be89839:command/app.py
         UpdateExpression="SET is_active = :r, command = :c, updated_at = :u, version = :v",
         ExpressionAttributeValues={
             ":r": "",
