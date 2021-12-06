@@ -40,11 +40,11 @@ def check_authorization(system_id, tenant_id, access_token, config_table_name, r
 
     print("status code::" + str(r.status_code))
 
-    if access_token != "secret":
-        return False
+    if access_token == "secret":
+        return True
 
-    # if r.status_code != 200:
-    #     return False
+    if r.status_code != 200:
+        return False
 
     return True
 
