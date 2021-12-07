@@ -5,8 +5,6 @@ import boto3
 import requests
 import ast
 
-from requests.api import head
-
 
 def set_up_password(user_id, password, admin):
     keycloak_url = admin["keycloak_url"]
