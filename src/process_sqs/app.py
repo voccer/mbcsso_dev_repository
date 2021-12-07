@@ -25,7 +25,7 @@ def set_up_password(user_id, password, admin, token):
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/reset-password"
     print(f"setup password url: {url}")
-    # token = get_token(admin)
+    
 
     print(f"setup password token: {token}")
     headers = {
@@ -52,7 +52,7 @@ def get_user_id(username, admin, token):
         username
     )
 
-    # token = get_token(admin)
+    
 
     headers = {
         "Content-Type": "application/json",
@@ -74,7 +74,6 @@ def get_group_id(group_name, admin, token):
         group_name
     )
 
-    # token = get_token(admin)
 
     headers = {
         "Content-Type": "application/json",
@@ -169,8 +168,10 @@ def create_user(data, admin):
 @xray_recorder.capture("sync:: delete user")
 def delete_user(data, admin):
     username = data["id"]["S"]
+    print(f"delete user with pre-username: {username}")
     username = str(username).strip().split("#")[-1]
-
+    print(f"delete user with after-username: {username}")
+    
     token = get_token(admin)
 
     user_id = get_user_id(username, admin, token)
@@ -310,9 +311,7 @@ def create_member_group(data, admin):
     #     "userID": user_id,
     #     "groupID": group_id
     # }
-    # return requests.request("PUT", url=url, headers=headers,
-    #                         json=payload, verify=False).status_code
-
+    
     return requests.request("PUT", url=url, headers=headers).status_code
 
 
