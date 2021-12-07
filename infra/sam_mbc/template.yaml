@@ -53,13 +53,13 @@ Resources:
         DestinationArn: !GetAtt ApiLogGroup.Arn
         Format: '{"requestId":"$context.requestId","requestTime":"$context.requestTime", "routeKey":"$context.routeKey", "status":"$context.status", "error": "$context.authorizer.error"}'
       Auth:
-        DefaultAuthorizer: LambdaRequestAuthorizer
+        # DefaultAuthorizer: LambdaRequestAuthorizer
         Authorizers:
           LambdaRequestAuthorizer:
             FunctionArn: !GetAtt AuthFunction.Arn
-            Identity:
-              Headers:
-                - Authorization
+            # Identity:
+            #   Headers:
+            #     - Authorization
             AuthorizerPayloadFormatVersion: 2.0
             EnableSimpleResponses: true
             FunctionPayloadType: REQUEST
