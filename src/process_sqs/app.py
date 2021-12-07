@@ -145,9 +145,9 @@ def lambda_handler(event, context):
                     else:
                         create_group(data)
             elif event_name == "MODIFY":
-                update_data(table_name, data)
+                pass
             elif event_name == "REMOVE":
-                delete_data(table_name, data)
+                pass
 
     # TODO: push to eventbridge
 
