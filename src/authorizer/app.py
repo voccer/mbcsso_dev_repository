@@ -2,6 +2,7 @@ import os
 import boto3
 import requests
 import jwt
+from aws_xray_sdk.core import xray_recorder
 
 admin_roles = [
     "manage-authorization",
@@ -22,7 +23,7 @@ admin_roles = [
     "view-users",
 ]
 
-
+@xray_recorder.capture("check allow to access")
 def check_allow_to_access(roles, action, preferred_username):
     roles_set = set(roles)
     is_admin = True
@@ -42,6 +43,7 @@ def check_allow_to_access(roles, action, preferred_username):
 
 
 # verify access token in keycloak
+@xray_recorder.capture("check authorization")
 def check_authorization(
     system_id, tenant_id, access_token, config_table_name, action, region
 ):
@@ -107,7 +109,7 @@ def check_authorization(
 
     return True
 
-
+@xray_recorder.capture("authorizer")
 def lambda_handler(event, context):
     print(f"authorizer event: {event}")
     name = os.environ.get("SYSTEM_NAME", "mbcsso")
@@ -124,7 +126,7 @@ def lambda_handler(event, context):
 
     method, path = route_key.split(" ")
 
-    user_id = event.get("pathParameters").get("user_id", "")
+    user_id = event.get("pathParameters", {}).get("user_id", "")
 
     action = ""
     if method == "POST" and path == "/users":

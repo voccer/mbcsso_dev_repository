@@ -5,7 +5,6 @@ import boto3
 import requests
 import ast
 
-from requests.api import head
 from aws_xray_sdk.core import xray_recorder
 
 
