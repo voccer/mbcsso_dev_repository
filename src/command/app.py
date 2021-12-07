@@ -158,34 +158,37 @@ def update_user(event, table):
                         {"code": "E_INVALID", "message": "email already exist"}
                     ),
                 }
-    else:
-        params["email"] = user.get("email", "")
 
     if "password" in body:
         params["password"] = encrypt(body["password"])
-    else:
-        params["password"] = user.get("password", "")
-    params["first_name"] = body.get("first_name", user.get("first_name", ""))
-    params["last_name"] = body.get("last_name", user.get("last_name", ""))
+    params["first_name"] = body.get("first_name", "")
+    params["last_name"] = body.get("last_name", "")
 
-    ExpressionAttributeValues = {
+    expression_attribute_values = {
         ":c": "update",
         ":s": f"{int(current_version) + 1}",
-        ":fn": params["first_name"],
-        ":ln": params["last_name"],
-        ":p": params["password"],
-        ":e": params["email"],
         ":u": int(time.time()),
     }
-    for k, v in list(ExpressionAttributeValues.items()):
-        if not v:
-            del ExpressionAttributeValues[k]
-
+    update_expression = "SET command = :c, version = :s, updated_at = :u"
+    if params["password"]:
+        expression_attribute_values[":p"] = params["password"]
+        update_expression += ", password = :p"
+    if params["first_name"]:
+        expression_attribute_values[":fn"] = params["first_name"]
+        update_expression += ", first_name = :fn"
+    if params["last_name"]:
+        expression_attribute_values[":ln"] = params["last_name"]
+        update_expression += ", last_name = :ln"
+    if params["email"]:
+        expression_attribute_values[":e"] = params["email"]
+        update_expression += ", email = :e"
+    
+    # for k, v in list(expression_attribute_values.items()):
     # add new record for command update, current record will add new record
     table.update_item(
         Key={"id": f"user#{user_id}", "sk": "config"},
-        UpdateExpression="SET command = :c, version = :s, first_name = :fn, last_name = :ln, password = :p, email = :e, updated_at = :u",
-        ExpressionAttributeValues=ExpressionAttributeValues,
+        UpdateExpression=update_expression,
+        ExpressionAttributeValues=expression_attribute_values,
         ReturnValues="UPDATED_NEW",
     )
 
