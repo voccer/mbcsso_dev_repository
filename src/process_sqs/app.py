@@ -79,6 +79,11 @@ def get_token(admin):
     url = f"{keycloak_url}/auth/realms/{keycloak_realm}/protocol/openid-connect/token"
     client_id = admin["client_id"]
     username = admin["admin"]
+    
+    # Todo: get plaintext password from kms
+    kms_client = boto3.client("kms")
+    
+    
     password = admin["password"]
 
     params = {
@@ -119,7 +124,7 @@ def create_user(data, admin):
         payload["firstName"] = data["first_name"]
     if "last_name" in data:
         payload["lastName"] = data["last_name"]
-
+        
     code = requests.post(
         url=url, headers=headers, json=payload, verify=False
     ).status_code
@@ -382,8 +387,8 @@ def lambda_handler(event, context):
             print(f"admin: {admin}")
 
             if event_name == "INSERT":
-                sk = str(data["sk"]).strip().split("#")[0]
-                pk = str(data["id"]).strip().split("#")[0]
+                sk = str(data["sk"]["S"]).strip().split("#")[0]
+                pk = str(data["id"]["S"]).strip().split("#")[0]
                 if str(sk).strip() == "config":
                     if str(pk) == "user":
                         create_user(data, admin)
@@ -392,16 +397,16 @@ def lambda_handler(event, context):
                 if sk == "member":
                     create_member_group(data, admin)
             elif event_name == "MODIFY":
-                sk = str(data["sk"]).split("#")[0]
-                pk = str(data["id"]).split("#")[0]
+                sk = str(data["sk"]["S"]).strip().split("#")[0]
+                pk = str(data["id"]["S"]).strip().split("#")[0]
                 if sk == "config":
                     if pk == "user":
                         update_user(data, admin)
             elif event_name == "REMOVE":
-                sk = str(data["sk"]).strip().split("#")[0]
-                pk = str(data["id"]).strip().split("#")[0]
+                sk = str(data["sk"]["S"]).strip().split("#")[0]
+                pk = str(data["id"]["S"]).strip().split("#")[0]
                 if str(sk).strip() == "config":
-                    if str(pk)[:4] == "user":
+                    if str(pk) == "user":
                         delete_user(data, admin)
                     else:
                         delete_group(data, admin)
