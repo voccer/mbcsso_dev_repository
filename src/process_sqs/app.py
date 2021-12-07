@@ -95,8 +95,10 @@ def get_token(admin):
 
 @xray_recorder.capture("sync:: create user")
 def create_user(data, admin):
+    print("sync:: create user")
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
+
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users"
     username = data.get("id").strip().split("#")[-1]
     payload = {
@@ -121,6 +123,8 @@ def create_user(data, admin):
     code = requests.post(
         url=url, headers=headers, json=payload, verify=False
     ).status_code
+
+    print("sync:: create user with code: ", code)
     if str(code) == "201":
         if "password" in data:
             password = data["password"]
@@ -316,6 +320,7 @@ def create_data(table_name, data):
 #     client = boto3.client("dynamodb")
 #     client.put_item(TableName=table_name, Item=data)
 
+
 @xray_recorder.capture("push db:: delete data")
 def delete_data(table_name, data):
     print(f"delete_data: {table_name}")
@@ -353,6 +358,7 @@ def lambda_handler(event, context):
                 delete_data(table_name, data)
 
     # TODO: sync data to keycloak
+    print("sync data to keycloak")
     for record in event["Records"]:
         body = json.loads(record["body"])
 
@@ -368,12 +374,12 @@ def lambda_handler(event, context):
             region = os.environ.get("REGION", "ap-northeast-1")
             table_name = f"{system_name}_{env}_Config"
 
-            table = boto3.resource(
-                "dynamodb", region_name=region).Table(table_name)
-            resp = table.get_item(
-                Key={"system_id": system_id, "tenant_id": tenant_id})
+            table = boto3.resource("dynamodb", region_name=region).Table(table_name)
+            resp = table.get_item(Key={"system_id": system_id, "tenant_id": tenant_id})
 
             admin = resp.get("Item")
+
+            print(f"admin: {admin}")
 
             if event_name == "INSERT":
                 sk = str(data["sk"]).strip().split("#")[0]
