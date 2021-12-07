@@ -8,9 +8,12 @@ import ast
 from requests.api import head
 
 
-def set_up_password(user_id, password):
-    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}/reset-password"
-    token = get_token()
+def set_up_password(user_id, password, admin):
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/reset-password"
+    token = get_token(admin)
 
     headers = {
         "content-type": "application/json",
@@ -23,8 +26,10 @@ def set_up_password(user_id, password):
     ).status_code
 
 
-def get_user_id(username):
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/users/?username=" + str(
+def get_user_id(username, admin):
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/?username=" + str(
         username
     )
 
@@ -38,12 +43,14 @@ def get_user_id(username):
     return requests.get(url=url, headers=headers).json()[0]["id"]
 
 
-def get_group_id(group_name):
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups?search=" + str(
+def get_group_id(group_name, admin):
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}dev/groups?search=" + str(
         group_name
     )
 
-    token = get_token()
+    token = get_token(admin)
 
     headers = {
         "content-type": "application/json",
@@ -53,13 +60,18 @@ def get_group_id(group_name):
     return requests.get(url=url, headers=headers).json()[0]["id"]
 
 
-def get_token():
-    url = "https://dev.sso-service.com/auth/realms/master/protocol/openid-connect/token"
+def get_token(admin):
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+    url = f"{keycloak_url}/auth/realms/{keycloak_realm}/protocol/openid-connect/token"
+    client_id = admin["client_id"]
+    username = admin["admin"]
+    password = admin["password"]
 
     params = {
-        "client_id": "admin-cli",
-        "username": "keycloak-developer",
-        "password": "hA3Me3ub7jMJwc772TpUsB6f2Ccd",
+        "client_id": client_id,
+        "username": username,
+        "password": password,
         "grant_type": "password",
     }
 
@@ -68,8 +80,10 @@ def get_token():
     )["access_token"]
 
 
-def create_user(data):
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/users"
+def create_user(data, admin):
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users"
     username = data.get("id").strip().split("#")[-1]
     payload = {
         "enabled": True,
@@ -79,7 +93,7 @@ def create_user(data):
         "username": username,
     }
 
-    token = get_token()
+    token = get_token(admin)
     headers = {
         "content-type": "application/json",
         "Authorization": "Bearer " + str(token),
@@ -96,40 +110,44 @@ def create_user(data):
     if str(code) == "201":
         if "password" in data:
             password = data["password"]
-            user_id = get_user_id(username)
+            user_id = get_user_id(username, admin)
 
-            set_up_password(user_id, password)
+            set_up_password(user_id, password, admin)
 
 
-def delete_user(data):
+def delete_user(data, admin):
     username = data["id"]
-    username = str(username).strip()[5:]
+    username = str(username).strip().split("#")[-1]
 
-    user_id = get_user_id(username)
+    user_id = get_user_id(username, admin)
 
-    token = get_token()
+    token = get_token(admin)
 
     headers = {
         "content-type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
 
     url = (
-        "https://dev.sso-service.com/auth/admin/realms/dev/users/"
+        f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/"
         + str(user_id).strip()
     )
 
     requests.delete(url=url, headers=headers)
 
 
-def update_user(data):
+def update_user(data, admin):
     username = data.get("id").strip().split("#")[-1]
 
-    user_id = get_user_id(username)
+    user_id = get_user_id(username, admin)
 
-    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}"
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}"
 
-    token = get_token()
+    token = get_token(admin)
 
     headers = {
         "content-type": "application/json",
@@ -146,60 +164,67 @@ def update_user(data):
 
     if "password" in data:
         password = data["password"]
-        set_up_password(user_id, password)
+        set_up_password(user_id, password, admin)
 
     return requests.request(
         "PUT", url=url, headers=headers, json=payload, verify=False
     ).status_code
 
 
-def create_group(data):
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups"
-    token = get_token()
+def create_group(data, admin):
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/groups"
+    token = get_token(admin)
 
     headers = {
         "content-type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
-    payload = {"name": data.get("id").strip()[6:]}
+    payload = {"name": data.get("id").strip().split("#")[-1]}
 
     return requests.request(
         "POST", url, json=payload, headers=headers, verify=False
     ).status_code
 
 
-def delete_group(data):
+def delete_group(data, admin):
     group_name = data["id"]
-    group_name = str(group_name).strip()[6:]
+    group_name = str(group_name).strip().split("#")[-1]
 
-    group_id = get_group_id(group_name)
+    group_id = get_group_id(group_name, admin)
     print(group_name, group_id)
 
-    token = get_token()
+    token = get_token(admin)
 
     headers = {
         "authorization": "Bearer " + str(token),
         "content-type": "application/json",
         "cache-control": "no-cache",
     }
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
 
     url = (
-        "https://dev.sso-service.com/auth/admin/realms/dev/groups/"
+        f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/groups/"
         + str(group_id).strip()
     )
 
     return requests.delete(url=url, headers=headers).status_code
 
 
-def create_member_group(data):
-    group_name = str(data["id"]).strip()[6:]
-    user_name = str(data["sk"]).strip()[7:]
+def create_member_group(data, admin):
+    group_name = str(data["id"]).strip().split("#")[-1]
+    user_name = str(data["sk"]).strip().split("#")[-1]
 
-    user_id = get_user_id(user_name)
-    group_id = get_group_id(group_name)
+    user_id = get_user_id(user_name, admin)
+    group_id = get_group_id(group_name, admin)
 
-    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}/groups/{group_id}"
-    token = get_token()
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/groups/{group_id}"
+    token = get_token(admin)
 
     headers = {
         "authorization": "Bearer " + str(token),
@@ -217,15 +242,15 @@ def create_member_group(data):
     return requests.request("PUT", url=url, headers=headers).status_code
 
 
-def delete_member_group(data):
-    group_name = str(data["id"]).strip()[6:]
-    user_name = str(data["sk"]).strip()[7:]
+def delete_member_group(data, admin):
+    group_name = str(data["id"]).strip().split("#")[-1]
+    user_name = str(data["sk"]).strip().split("#")[-1]
 
-    user_id = get_user_id(user_name)
-    group_id = get_group_id(group_name)
+    user_id = get_user_id(user_name, admin)
+    group_id = get_group_id(group_name, admin)
 
     url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}/groups/{group_id}"
-    token = get_token()
+    token = get_token(admin)
 
     headers = {
         "authorization": "Bearer " + str(token),
@@ -316,33 +341,42 @@ def lambda_handler(event, context):
             system_id, tenant_id = mess["system_id"], mess["tenant_id"]
             event_name = mess["event_name"]
             data = mess["data"]
+            region = os.environ.get("REGION", "ap-northeast-1")
+            table_name = f"{system_name}_{env}_{system_id}_{tenant_id}_Config"
+
+            table = boto3.resource(
+                "dynamodb", region_name=region).Table(table_name)
+            resp = table.get_item(
+                Key={"system_id": system_id, "tenant_id": tenant_id})
+
+            admin = resp.get("Item")
 
             if event_name == "INSERT":
                 sk = str(data["sk"]).strip().split("#")[0]
                 pk = str(data["id"]).strip().split("#")[0]
                 if str(sk).strip() == "config":
                     if str(pk) == "user":
-                        create_user(data)
+                        create_user(data, admin)
                     else:
-                        create_group(data)
+                        create_group(data, admin)
                 if sk == "member":
-                    create_member_group(data)
+                    create_member_group(data, admin)
             elif event_name == "MODIFY":
                 sk = str(data["sk"]).split("#")[0]
                 pk = str(data["id"]).split("#")[0]
                 if sk == "config":
                     if pk == "user":
-                        update_user(data)
+                        update_user(data, admin)
             elif event_name == "REMOVE":
                 sk = str(data["sk"]).strip().split("#")[0]
                 pk = str(data["id"]).strip().split("#")[0]
                 if str(sk).strip() == "config":
                     if str(pk)[:4] == "user":
-                        delete_user(data)
+                        delete_user(data, admin)
                     else:
-                        delete_group(data)
+                        delete_group(data, admin)
                 if sk == "member":
-                    delete_member_group(data)
+                    delete_member_group(data, admin)
 
     # TODO: push to eventbridge
 
