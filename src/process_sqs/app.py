@@ -44,7 +44,7 @@ def get_user_id(username, admin):
         username
     )
 
-    token = get_token()
+    token = get_token(admin)
 
     headers = {
         "content-type": "application/json",
@@ -79,11 +79,14 @@ def get_token(admin):
     url = f"{keycloak_url}/auth/realms/{keycloak_realm}/protocol/openid-connect/token"
     client_id = admin["client_id"]
     username = admin["admin"]
-    
+
     # Todo: get plaintext password from kms
-    kms_client = boto3.client("kms")
-    
-    
+    # kms_client = boto3.client("kms")
+    # alias = ""
+    # plain_text = kms_client.decrypt(
+    #     KeyId=alias, CiphertextBlob=bytes(base64.b64decode(cipher_text))
+    # )
+
     password = admin["password"]
 
     params = {
@@ -105,7 +108,7 @@ def create_user(data, admin):
     keycloak_realm = admin["keycloak_realm"]
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users"
-    username = data.get("id").strip().split("#")[-1]
+    username = data["id"]["S"].strip().split("#")[-1]
     payload = {
         "enabled": True,
         "attributes": {},
@@ -121,10 +124,10 @@ def create_user(data, admin):
     }
 
     if "first_name" in data:
-        payload["firstName"] = data["first_name"]
+        payload["firstName"] = data["first_name"]["S"]
     if "last_name" in data:
-        payload["lastName"] = data["last_name"]
-        
+        payload["lastName"] = data["last_name"]["S"]
+
     code = requests.post(
         url=url, headers=headers, json=payload, verify=False
     ).status_code
@@ -132,7 +135,7 @@ def create_user(data, admin):
     print("sync:: create user with code: ", code)
     if str(code) == "201":
         if "password" in data:
-            password = data["password"]
+            password = data["password"]["S"]
             user_id = get_user_id(username, admin)
 
             set_up_password(user_id, password, admin)
@@ -140,7 +143,7 @@ def create_user(data, admin):
 
 @xray_recorder.capture("sync:: delete user")
 def delete_user(data, admin):
-    username = data["id"]
+    username = data["id"]['S']
     username = str(username).strip().split("#")[-1]
 
     user_id = get_user_id(username, admin)
@@ -164,7 +167,7 @@ def delete_user(data, admin):
 
 @xray_recorder.capture("sync:: update user")
 def update_user(data, admin):
-    username = data.get("id").strip().split("#")[-1]
+    username = data['id']['S'].strip().split("#")[-1]
 
     user_id = get_user_id(username, admin)
 
@@ -181,14 +184,14 @@ def update_user(data, admin):
     payload = {"username": username}
 
     if "last_name" in data:
-        payload["lastName"] = data["last_name"]
+        payload["lastName"] = data["last_name"]['S']
     if "first_name" in data:
-        payload["firstName"] = data["first_name"]
+        payload["firstName"] = data["first_name"]['S']
     if "email" in data:
-        payload["email"] = data["email"]
+        payload["email"] = data["email"]['S']
 
     if "password" in data:
-        password = data["password"]
+        password = data["password"]['S']
         set_up_password(user_id, password, admin)
 
     return requests.request(
@@ -207,7 +210,7 @@ def create_group(data, admin):
         "content-type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
-    payload = {"name": data.get("id").strip().split("#")[-1]}
+    payload = {"name": data['id']['S'].strip().split("#")[-1]}
 
     return requests.request(
         "POST", url, json=payload, headers=headers, verify=False
@@ -216,7 +219,7 @@ def create_group(data, admin):
 
 @xray_recorder.capture("sync:: delete group")
 def delete_group(data, admin):
-    group_name = data["id"]
+    group_name = data["id"]['S']
     group_name = str(group_name).strip().split("#")[-1]
 
     group_id = get_group_id(group_name, admin)
@@ -242,8 +245,8 @@ def delete_group(data, admin):
 
 @xray_recorder.capture("sync:: add member group")
 def create_member_group(data, admin):
-    group_name = str(data["id"]).strip().split("#")[-1]
-    user_name = str(data["sk"]).strip().split("#")[-1]
+    group_name = str(data["id"]['S']).strip().split("#")[-1]
+    user_name = str(data["sk"]['S']).strip().split("#")[-1]
 
     user_id = get_user_id(user_name, admin)
     group_id = get_group_id(group_name, admin)
@@ -272,8 +275,8 @@ def create_member_group(data, admin):
 
 @xray_recorder.capture("sync:: delete member group")
 def delete_member_group(data, admin):
-    group_name = str(data["id"]).strip().split("#")[-1]
-    user_name = str(data["sk"]).strip().split("#")[-1]
+    group_name = str(data["id"]['S']).strip().split("#")[-1]
+    user_name = str(data["sk"]['S']).strip().split("#")[-1]
 
     user_id = get_user_id(user_name, admin)
     group_id = get_group_id(group_name, admin)
@@ -299,7 +302,7 @@ def create_data(table_name, data):
     print(f"create_data: {table_name}")
     print(f"create_data: {data}")
     # ignore if data is config#version
-    sk = data["sk"]
+    sk = data["sk"]['S']
     if "config#" in sk:
         return
 
