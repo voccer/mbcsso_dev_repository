@@ -48,9 +48,9 @@ def create_user(event, table):
         "id": "user#" + body["username"],
         "sk": "config",
         "command": "add",
-        "sso_type": "keycloak",
+        "sso_type": "keycloak", # default sso type to keycloak
         "is_active": 1,
-        "version": 1, ## always set version to 1 when create user with command add
+        "version": 1, # always set version to 1 when create user with command add
         "updated_at": int(time.time()),
     }
 
