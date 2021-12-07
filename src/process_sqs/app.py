@@ -64,6 +64,7 @@ def lambda_handler(event, context):
 
     ## TODO: sync data to keycloak
     
+    
     ## TODO: push to eventbridge
 
     return {
