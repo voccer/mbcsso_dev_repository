@@ -158,6 +158,8 @@ def update_user(event, table):
                         {"code": "E_INVALID", "message": "email already exist"}
                     ),
                 }
+    else:
+        params["email"] = None
 
     if "password" in body:
         params["password"] = encrypt(body["password"])
