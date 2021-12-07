@@ -89,6 +89,7 @@ def check_authorization(
     response = requests.request("GET", url=keycloak_userinfo_url, headers=headers, data=payload)
     if response.status_code != 200:
         return False
+    
     preferred_username = response.json().get("preferred_username", "")
     
     payload = jwt.decode(access_token, verify=False)
@@ -121,12 +122,12 @@ def lambda_handler(event, context):
     route_key = event["requestContext"]["routeKey"]
 
     method, path = route_key.split(" ")
-    raw_path = event.get("rawPath", "")
+    
+    user_id=event["pathParameters"].get("user_id", "")
     action = ""
     if method == "POST" and path == "/users":
         action = "create_user"
     elif method == "PUT" and path == "/users/{user_id}":
-        user_id = raw_path.split("/")[-1]
         action = f"update_user#{user_id}"
     elif method == "DELETE" and path == "/users/{user_id}":
         action = "delete_user"
@@ -146,7 +147,6 @@ def lambda_handler(event, context):
         elif path == "/groups":
             action = "search_groups"
         elif path == "/users/{user_id}":
-            user_id = raw_path.split("/")[-1]
             action = f"get_user#{user_id}"
         elif path == "/groups/{group_id}":
             action = "get_group"
