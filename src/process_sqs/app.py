@@ -52,8 +52,6 @@ def get_user_id(username, admin, token):
         username
     )
 
-    
-
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
@@ -176,7 +174,7 @@ def delete_user(data, admin):
 
     user_id = get_user_id(username, admin, token)
     if not user_id:
-        print(f"user not found when delete user{username}")
+        print(f"user not found when delete user::{username}")
         return
 
     headers = {
@@ -438,27 +436,26 @@ def lambda_handler(event, context):
 
             print(f"admin: {admin}")
 
+            sk = str(data["sk"]["S"]).strip()
+            pk = str(data["id"]["S"]).strip().split("#")[0]
+            if sk.startswith("config#"):
+                continue
+            
             if event_name == "INSERT":
-                sk = str(data["sk"]["S"]).strip().split("#")[0]
-                pk = str(data["id"]["S"]).strip().split("#")[0]
-                if str(sk).strip() == "config":
-                    if str(pk) == "user":
+                if sk == "config":
+                    if pk == "user":
                         create_user(data, admin)
                     else:
                         create_group(data, admin)
                 if sk == "member":
                     create_member_group(data, admin)
             elif event_name == "MODIFY":
-                sk = str(data["sk"]["S"]).strip().split("#")[0]
-                pk = str(data["id"]["S"]).strip().split("#")[0]
                 if sk == "config":
                     if pk == "user":
                         update_user(data, admin)
             elif event_name == "REMOVE":
-                sk = str(data["sk"]["S"]).strip().split("#")[0]
-                pk = str(data["id"]["S"]).strip().split("#")[0]
-                if str(sk).strip() == "config":
-                    if str(pk) == "user":
+                if sk == "config":
+                    if pk == "user":
                         delete_user(data, admin)
                     else:
                         delete_group(data, admin)
