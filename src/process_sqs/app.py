@@ -5,9 +5,39 @@ import boto3
 import requests
 import ast
 
+from requests.api import head
+
+
+def get_user_id(username):
+    url = "https://dev.sso-service.com/auth/admin/realms/dev/users/?username=" + \
+        str(username)
+
+    token = get_token()
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer ' + str(token)
+    }
+
+    return requests.get(url=url, headers=headers).json()[0]["id"]
+
+
+def get_group_id(group_name):
+    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups?search=" + \
+        str(group_name)
+
+    token = get_token()
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer ' + str(token)
+    }
+
+    return requests.get(url=url, headers=headers).json()[0]["id"]
+
 
 def get_token():
-    url = "https: // dev.sso-service.com/auth/realms/master/protocol/openid-connect/token"
+    url = "https://dev.sso-service.com/auth/realms/master/protocol/openid-connect/token"
 
     params = {
         "client_id": "admin-cli",
@@ -21,12 +51,13 @@ def get_token():
 
 def create_user(data):
     url = "https://dev.sso-service.com/auth/admin/realms/dev/users"
+    username = data.get('id').strip()[5:]
     payload = {
         "enabled": True,
         "attributes": {},
         "groups": [],
         "emailVerified": "",
-        "username": data["username"]
+        "username": username
     }
 
     token = get_token()
@@ -44,7 +75,22 @@ def create_user(data):
 
 
 def delete_user(data):
-    pass
+    username = data["id"]
+    username = str(username).strip()[5:]
+
+    user_id = get_user_id(username)
+
+    token = get_token()
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer ' + str(token)
+    }
+
+    url = "https://dev.sso-service.com/auth/admin/realms/dev/users/" + \
+        str(user_id).strip()
+
+    requests.delete(url=url, headers=headers)
 
 
 def update_user(data):
@@ -52,11 +98,38 @@ def update_user(data):
 
 
 def create_group(data):
-    pass
+    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups"
+    token = get_token()
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer ' + str(token)
+    }
+    payload = {
+        "name": data.get('id').strip()[:5]
+    }
+
+    requests.post(url=url, data=payload, headers=headers)
 
 
 def delete_group(data):
-    pass
+    group_name = data["id"]
+    group_name = str(group_name).strip()[6:]
+
+    group_id = get_group_id(group_name)
+    print(group_name, group_id)
+
+    token = get_token()
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer ' + str(token)
+    }
+
+    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups/" + \
+        str(group_id).strip()
+
+    return requests.delete(url=url, headers=headers).status_code
 
 
 def update_group(data):
@@ -147,7 +220,13 @@ def lambda_handler(event, context):
             elif event_name == "MODIFY":
                 pass
             elif event_name == "REMOVE":
-                pass
+                sk = data["sk"]
+                pk = data["id"]
+                if str(sk).strip() == "config":
+                    if str(pk)[:4] == "user":
+                        delete_user(data)
+                    else:
+                        delete_group(data)
 
     # TODO: push to eventbridge
 
