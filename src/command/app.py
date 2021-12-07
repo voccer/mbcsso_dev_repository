@@ -103,7 +103,7 @@ def update_user(event, table):
     if "username" in body:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "username not edit"}),
+            "body": json.dumps({"code": "E_INVALID", "message": "can not edit username"}),
         }
 
     raw_path = event.get("rawPath", None)
@@ -207,7 +207,7 @@ def update_user(event, table):
 
     return {
         "statusCode": 200,
-        "body": json.dumps({"code": "ok", "message": "update user"}),
+        "body": json.dumps({"code": "ok", "message": "updated user"}),
     }
 
 
