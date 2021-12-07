@@ -182,7 +182,7 @@ def update_user(event, table):
     if params["email"]:
         expression_attribute_values[":e"] = params["email"]
         update_expression += ", email = :e"
-    
+
     # for k, v in list(expression_attribute_values.items()):
     # add new record for command update, current record will add new record
     table.update_item(

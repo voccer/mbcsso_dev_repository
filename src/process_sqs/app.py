@@ -9,28 +9,30 @@ from requests.api import head
 
 
 def get_user_id(username):
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/users/?username=" + \
-        str(username)
+    url = "https://dev.sso-service.com/auth/admin/realms/dev/users/?username=" + str(
+        username
+    )
 
     token = get_token()
 
     headers = {
-        'content-type': 'application/json',
-        'Authorization': 'Bearer ' + str(token)
+        "content-type": "application/json",
+        "Authorization": "Bearer " + str(token),
     }
 
     return requests.get(url=url, headers=headers).json()[0]["id"]
 
 
 def get_group_id(group_name):
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups?search=" + \
-        str(group_name)
+    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups?search=" + str(
+        group_name
+    )
 
     token = get_token()
 
     headers = {
-        'content-type': 'application/json',
-        'Authorization': 'Bearer ' + str(token)
+        "content-type": "application/json",
+        "Authorization": "Bearer " + str(token),
     }
 
     return requests.get(url=url, headers=headers).json()[0]["id"]
@@ -43,27 +45,29 @@ def get_token():
         "client_id": "admin-cli",
         "username": "keycloak-developer",
         "password": "hA3Me3ub7jMJwc772TpUsB6f2Ccd",
-        "grant_type": "password"
+        "grant_type": "password",
     }
 
-    return ast.literal_eval(requests.post(url, params, verify=False).content.decode("utf-8"))['access_token']
+    return ast.literal_eval(
+        requests.post(url, params, verify=False).content.decode("utf-8")
+    )["access_token"]
 
 
 def create_user(data):
     url = "https://dev.sso-service.com/auth/admin/realms/dev/users"
-    username = data.get('id').strip().split("#")[-1]
+    username = data.get("id").strip().split("#")[-1]
     payload = {
         "enabled": True,
         "attributes": {},
         "groups": [],
         "emailVerified": "",
-        "username": username
+        "username": username,
     }
 
     token = get_token()
     headers = {
-        'content-type': 'application/json',
-        'Authorization': 'Bearer ' + str(token)
+        "content-type": "application/json",
+        "Authorization": "Bearer " + str(token),
     }
 
     if "first_name" in data:
@@ -71,7 +75,9 @@ def create_user(data):
     if "last_name" in data:
         payload["lastName"] = data["last_name"]
 
-    return requests.post(url=url, headers=headers, json=payload, verify=False).status_code
+    return requests.post(
+        url=url, headers=headers, json=payload, verify=False
+    ).status_code
 
 
 def delete_user(data):
@@ -83,18 +89,20 @@ def delete_user(data):
     token = get_token()
 
     headers = {
-        'content-type': 'application/json',
-        'Authorization': 'Bearer ' + str(token)
+        "content-type": "application/json",
+        "Authorization": "Bearer " + str(token),
     }
 
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/users/" + \
-        str(user_id).strip()
+    url = (
+        "https://dev.sso-service.com/auth/admin/realms/dev/users/"
+        + str(user_id).strip()
+    )
 
     requests.delete(url=url, headers=headers)
 
 
 def update_user(data):
-    username = data.get('id').strip().split("#")[-1]
+    username = data.get("id").strip().split("#")[-1]
 
     user_id = get_user_id(username)
 
@@ -103,12 +111,10 @@ def update_user(data):
     token = get_token()
 
     headers = {
-        'content-type': 'application/json',
-        'Authorization': 'Bearer ' + str(token)
+        "content-type": "application/json",
+        "Authorization": "Bearer " + str(token),
     }
-    payload = {
-        "username": username
-    }
+    payload = {"username": username}
 
     if "last_name" in data:
         payload["lastName"] = data["last_name"]
@@ -117,7 +123,9 @@ def update_user(data):
     if "email" in data:
         payload["email"] = data["email"]
 
-    return requests.request("PUT", url=url, headers=headers, json=payload, verify=False).status_code
+    return requests.request(
+        "PUT", url=url, headers=headers, json=payload, verify=False
+    ).status_code
 
 
 def create_group(data):
@@ -125,14 +133,14 @@ def create_group(data):
     token = get_token()
 
     headers = {
-        'content-type': 'application/json',
-        'Authorization': 'Bearer ' + str(token)
+        "content-type": "application/json",
+        "Authorization": "Bearer " + str(token),
     }
-    payload = {
-        "name": data.get('id').strip()[6:]
-    }
+    payload = {"name": data.get("id").strip()[6:]}
 
-    return requests.request("POST", url, json=payload, headers=headers, verify=False).status_code
+    return requests.request(
+        "POST", url, json=payload, headers=headers, verify=False
+    ).status_code
 
 
 def delete_group(data):
@@ -145,13 +153,15 @@ def delete_group(data):
     token = get_token()
 
     headers = {
-        'authorization': 'Bearer ' + str(token),
-        'content-type': "application/json",
-        'cache-control': "no-cache",
+        "authorization": "Bearer " + str(token),
+        "content-type": "application/json",
+        "cache-control": "no-cache",
     }
 
-    url = "https://dev.sso-service.com/auth/admin/realms/dev/groups/" + \
-        str(group_id).strip()
+    url = (
+        "https://dev.sso-service.com/auth/admin/realms/dev/groups/"
+        + str(group_id).strip()
+    )
 
     return requests.delete(url=url, headers=headers).status_code
 
@@ -167,9 +177,9 @@ def create_member_group(data):
     token = get_token()
 
     headers = {
-        'authorization': 'Bearer ' + str(token),
-        'content-type': "application/json",
-        'cache-control': "no-cache",
+        "authorization": "Bearer " + str(token),
+        "content-type": "application/json",
+        "cache-control": "no-cache",
     }
     # payload = {
     #     "realms": "dev",
@@ -193,11 +203,14 @@ def delete_member_group(data):
     token = get_token()
 
     headers = {
-        'authorization': 'Bearer ' + str(token),
-        'content-type': "application/json",
-        'cache-control': "no-cache",
+        "authorization": "Bearer " + str(token),
+        "content-type": "application/json",
+        "cache-control": "no-cache",
     }
     return requests.request("DELETE", url=url, headers=headers).status_code
+
+
+## ----------update to db---------------- ##
 
 
 def create_data(table_name, data):
@@ -208,22 +221,27 @@ def create_data(table_name, data):
     if "config#" in sk:
         return
 
+    if "password" in data:
+        del data["password"]
+
     client = boto3.client("dynamodb")
     client.put_item(TableName=table_name, Item=data)
     print("complete")
 
 
-def update_data(table_name, data):
-    # ignore if data is config#version
-    sk = data["sk"]
-    if "config#" in sk:
-        return
+# def update_data(table_name, data):
+#     # ignore if data is config#version
+#     sk = data["sk"]
+#     if "config#" in sk:
+#         return
 
-    print(f"update_data: {table_name}")
-    print(f"update_data: {data}")
+#     print(f"update_data: {table_name}")
+#     print(f"update_data: {data}")
+#     if "password" in data:
+#         del data["password"]
 
-    client = boto3.client("dynamodb")
-    client.put_item(TableName=table_name, Item=data)
+#     client = boto3.client("dynamodb")
+#     client.put_item(TableName=table_name, Item=data)
 
 
 def delete_data(table_name, data):
@@ -255,7 +273,7 @@ def lambda_handler(event, context):
             if event_name == "INSERT":
                 create_data(table_name, data)
             elif event_name == "MODIFY":
-                update_data(table_name, data)
+                create_data(table_name, data)  ## update to db same to create data
             elif event_name == "REMOVE":
                 delete_data(table_name, data)
 
