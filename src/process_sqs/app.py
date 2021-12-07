@@ -220,7 +220,13 @@ def lambda_handler(event, context):
             elif event_name == "MODIFY":
                 pass
             elif event_name == "REMOVE":
-                pass
+                sk = data["sk"]
+                pk = data["id"]
+                if str(sk).strip() == "config":
+                    if str(pk)[:4] == "user":
+                        delete_user(data)
+                    else:
+                        delete_group(data)
 
     # TODO: push to eventbridge
 
