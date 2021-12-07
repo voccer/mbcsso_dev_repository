@@ -86,7 +86,7 @@ def get_token(admin):
     system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
     env = os.environ.get("ENV", "dev")
 
-    alias = f"{system_name}_{env}_key_{username}"
+    alias = f"alias/{system_name}_{env}_key_{username}"
     password = kms_client.decrypt(
         KeyId=alias, CiphertextBlob=bytes(base64.b64decode(password))
     )
