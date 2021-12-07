@@ -35,7 +35,7 @@ def check_allow_to_access(roles, action, preferred_username):
     ## users only get or update themselves
     if action.startswith("get_user#") or action.startswith("update_user#"):
         user_id = action.split("#")[1]
-        if user_id == preferred_username:
+        if user_id == preferred_username and user_id:
             return True
 
     return False
@@ -116,16 +116,15 @@ def lambda_handler(event, context):
     config_table_name = "{}_{}_Config".format(name, env)
     access_token = event["headers"].get("authorization", "")
 
-    system_id, tenant_id = (
-        event["queryStringParameters"].get("system_id", ""),
-        event["queryStringParameters"].get("tenant_id", ""),
-    )
+    system_id, tenant_id = event.get("queryStringParameters", {}).get(
+        "system_id", ""
+    ), event.get("queryStringParameters", {}).get("tenant_id", "")
 
     route_key = event["requestContext"]["routeKey"]
 
     method, path = route_key.split(" ")
 
-    user_id = event["pathParameters"].get("user_id", "")
+    user_id = event.get("pathParameters").get("user_id", "")
 
     action = ""
     if method == "POST" and path == "/users":
