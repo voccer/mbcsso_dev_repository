@@ -18,18 +18,18 @@ def decrypt(password):
 
 
 @xray_recorder.capture("put password")
-def set_up_password(user_id, password, admin):
+def set_up_password(user_id, password, admin, token):
     print(f"start set up password with user_id: {user_id}, password: {password}")
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/reset-password"
     print(f"setup password url: {url}")
-    token = get_token(admin)
+    # token = get_token(admin)
 
     print(f"setup password token: {token}")
     headers = {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
     password = decrypt(password)
@@ -40,21 +40,22 @@ def set_up_password(user_id, password, admin):
     response = requests.request(
         "PUT", url=url, headers=headers, json=payload, verify=False
     )
+
     print(f"set up password::{response.status_code}")
 
 
 @xray_recorder.capture("get user_id keycloak")
-def get_user_id(username, admin):
+def get_user_id(username, admin, token):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/?username=" + str(
         username
     )
 
-    token = get_token(admin)
+    # token = get_token(admin)
 
     headers = {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
 
@@ -66,17 +67,17 @@ def get_user_id(username, admin):
 
 
 @xray_recorder.capture("get group_id keycloak")
-def get_group_id(group_name, admin):
+def get_group_id(group_name, admin, token):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}dev/groups?search=" + str(
         group_name
     )
 
-    token = get_token(admin)
+    # token = get_token(admin)
 
     headers = {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
 
@@ -140,7 +141,7 @@ def create_user(data, admin):
 
     token = get_token(admin)
     headers = {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
 
@@ -157,12 +158,12 @@ def create_user(data, admin):
     if str(code) == "201":
         if "password" in data:
             password = data["password"]["S"]
-            user_id = get_user_id(username, admin)
+            user_id = get_user_id(username, admin, token)
             if not user_id:
                 print("warning: user not found when set password")
 
                 return
-            set_up_password(user_id, password, admin)
+            set_up_password(user_id, password, admin, token)
 
 
 @xray_recorder.capture("sync:: delete user")
@@ -170,15 +171,15 @@ def delete_user(data, admin):
     username = data["id"]["S"]
     username = str(username).strip().split("#")[-1]
 
-    user_id = get_user_id(username, admin)
+    token = get_token(admin)
+
+    user_id = get_user_id(username, admin, token)
     if not user_id:
         print(f"user not found when delete user{username}")
         return
 
-    token = get_token(admin)
-
     headers = {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
     keycloak_url = admin["keycloak_url"]
@@ -196,7 +197,9 @@ def delete_user(data, admin):
 def update_user(data, admin):
     username = data["id"]["S"].strip().split("#")[-1]
 
-    user_id = get_user_id(username, admin)
+    token = get_token(admin)
+
+    user_id = get_user_id(username, admin, token)
     if not user_id:
         print(f"user not found when update user::{username}")
         return
@@ -205,10 +208,8 @@ def update_user(data, admin):
     keycloak_realm = admin["keycloak_realm"]
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}"
 
-    token = get_token(admin)
-
     headers = {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
     payload = {"username": username}
@@ -222,7 +223,7 @@ def update_user(data, admin):
 
     if "password" in data:
         password = data["password"]["S"]
-        set_up_password(user_id, password, admin)
+        set_up_password(user_id, password, admin, token)
 
     return requests.request(
         "PUT", url=url, headers=headers, json=payload, verify=False
@@ -237,7 +238,7 @@ def create_group(data, admin):
     token = get_token(admin)
 
     headers = {
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
     payload = {"name": data["id"]["S"].strip().split("#")[-1]}
@@ -252,7 +253,9 @@ def delete_group(data, admin):
     group_name = data["id"]["S"]
     group_name = str(group_name).strip().split("#")[-1]
 
-    group_id = get_group_id(group_name, admin)
+    token = get_token(admin)
+
+    group_id = get_group_id(group_name, admin, token)
 
     if not group_id:
         print("group not found")
@@ -261,11 +264,9 @@ def delete_group(data, admin):
 
     print(group_name, group_id)
 
-    token = get_token(admin)
-
     headers = {
         "authorization": "Bearer " + str(token),
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "cache-control": "no-cache",
     }
     keycloak_url = admin["keycloak_url"]
@@ -284,23 +285,24 @@ def create_member_group(data, admin):
     group_name = str(data["id"]["S"]).strip().split("#")[-1]
     user_name = str(data["sk"]["S"]).strip().split("#")[-1]
 
-    user_id = get_user_id(user_name, admin)
-    group_id = get_group_id(group_name, admin)
+    token = get_token(admin)
+
+    user_id = get_user_id(user_name, admin, token)
+    group_id = get_group_id(group_name, admin, token)
+
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/groups/{group_id}"
 
     if not user_id or not group_id:
         print("user or group not found")
 
         return
 
-    keycloak_url = admin["keycloak_url"]
-    keycloak_realm = admin["keycloak_realm"]
-
-    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/groups/{group_id}"
-    token = get_token(admin)
-
     headers = {
         "authorization": "Bearer " + str(token),
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "cache-control": "no-cache",
     }
     # payload = {
@@ -319,22 +321,24 @@ def delete_member_group(data, admin):
     group_name = str(data["id"]["S"]).strip().split("#")[-1]
     user_name = str(data["sk"]["S"]).strip().split("#")[-1]
 
-    user_id = get_user_id(user_name, admin)
-    group_id = get_group_id(group_name, admin)
+    token = get_token(admin)
+
+    user_id = get_user_id(user_name, admin, token)
+    group_id = get_group_id(group_name, admin, token)
+
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/groups/{group_id}"
 
     if not user_id or not group_id:
         print("user or group not found")
 
         return
 
-    keycloak_url = admin["keycloak_url"]
-    keycloak_realm = admin["keycloak_realm"]
-    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/groups/{group_id}"
-    token = get_token(admin)
-
     headers = {
         "authorization": "Bearer " + str(token),
-        "content-type": "application/json",
+        "Content-Type": "application/json",
         "cache-control": "no-cache",
     }
     return requests.request("DELETE", url=url, headers=headers).status_code
