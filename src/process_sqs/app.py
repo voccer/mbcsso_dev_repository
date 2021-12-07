@@ -52,7 +52,11 @@ def get_user_id(username, admin):
         "Authorization": "Bearer " + str(token),
     }
 
-    return requests.get(url=url, headers=headers).json()[0]["id"]
+    response = requests.get(url=url, headers=headers).json()
+    if len(response) == 0:
+        return None
+    
+    return response[0]["id"]
 
 
 @xray_recorder.capture("get group_id keycloak")
@@ -70,7 +74,11 @@ def get_group_id(group_name, admin):
         "Authorization": "Bearer " + str(token),
     }
 
-    return requests.get(url=url, headers=headers).json()[0]["id"]
+    response = requests.get(url=url, headers=headers).json()
+    if len(response) == 0:
+        return None
+    
+    return response[0]["id"]
 
 
 @xray_recorder.capture("get token admin account")
@@ -140,7 +148,10 @@ def create_user(data, admin):
         if "password" in data:
             password = data["password"]["S"]
             user_id = get_user_id(username, admin)
-
+            if not user_id:
+                print("warning: user not found when set password")
+                
+                return 
             set_up_password(user_id, password, admin)
 
 
@@ -150,6 +161,9 @@ def delete_user(data, admin):
     username = str(username).strip().split("#")[-1]
 
     user_id = get_user_id(username, admin)
+    if not user_id:
+        print("user not found when delete user")
+        return
 
     token = get_token(admin)
 
@@ -173,6 +187,9 @@ def update_user(data, admin):
     username = data["id"]["S"].strip().split("#")[-1]
 
     user_id = get_user_id(username, admin)
+    if not user_id:
+        print("user not found when update user")
+        return 
 
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -226,6 +243,12 @@ def delete_group(data, admin):
     group_name = str(group_name).strip().split("#")[-1]
 
     group_id = get_group_id(group_name, admin)
+    
+    if not group_id:
+        print("group not found")
+        
+        return 
+    
     print(group_name, group_id)
 
     token = get_token(admin)
@@ -253,6 +276,11 @@ def create_member_group(data, admin):
 
     user_id = get_user_id(user_name, admin)
     group_id = get_group_id(group_name, admin)
+    
+    if not user_id or not group_id:
+        print("user or group not found")
+        
+        return
 
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -283,6 +311,11 @@ def delete_member_group(data, admin):
 
     user_id = get_user_id(user_name, admin)
     group_id = get_group_id(group_name, admin)
+    
+    if not user_id or not group_id: 
+        print("user or group not found")
+               
+        return
 
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
