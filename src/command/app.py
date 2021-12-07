@@ -178,7 +178,7 @@ def update_user(event, table):
         ":u": int(time.time()),
     }
     for k, v in list(ExpressionAttributeValues.items()):
-        if v is None:
+        if not v:
             del ExpressionAttributeValues[k]
 
     # add new record for command update, current record will add new record

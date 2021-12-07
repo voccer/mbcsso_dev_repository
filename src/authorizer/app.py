@@ -124,6 +124,7 @@ def lambda_handler(event, context):
     method, path = route_key.split(" ")
     
     user_id=event["pathParameters"].get("user_id", "")
+    
     action = ""
     if method == "POST" and path == "/users":
         action = "create_user"
