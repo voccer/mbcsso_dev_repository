@@ -8,6 +8,23 @@ import ast
 from requests.api import head
 
 
+def set_up_password(user_id, password):
+    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}/reset-password"
+    token = get_token()
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer ' + str(token)
+    }
+    payload = {
+        "type": "password",
+        "value": password,
+        "temporary": False
+    }
+
+    return requests.request("PUT", url=url, headers=headers, json=payload, verify=False).status_code
+
+
 def get_user_id(username):
     url = "https://dev.sso-service.com/auth/admin/realms/dev/users/?username=" + \
         str(username)
@@ -71,7 +88,14 @@ def create_user(data):
     if "last_name" in data:
         payload["lastName"] = data["last_name"]
 
-    return requests.post(url=url, headers=headers, json=payload, verify=False).status_code
+    code = requests.post(url=url, headers=headers,
+                         json=payload, verify=False).status_code
+    if str(code) == "201":
+        if "password" in data:
+            password = data["password"]
+            user_id = get_user_id(username)
+
+            set_up_password(user_id, password)
 
 
 def delete_user(data):
@@ -116,6 +140,10 @@ def update_user(data):
         payload["firstName"] = data["first_name"]
     if "email" in data:
         payload["email"] = data["email"]
+
+    if "password" in data:
+        password = data["password"]
+        set_up_password(user_id, password)
 
     return requests.request("PUT", url=url, headers=headers, json=payload, verify=False).status_code
 
