@@ -233,7 +233,7 @@ def delete_user(event, table):
         if str(is_active).strip() != "1":
             return {
                 "statusCode": 400,
-                "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+                "body": json.dumps({"code": "E_INVALID", "message": "user is not active"}),
             }
 
     user = check_user.get("Item")
