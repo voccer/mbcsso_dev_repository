@@ -18,14 +18,14 @@ def decrypt(password):
 
 
 @xray_recorder.capture("put password")
-def set_up_password(user_id, password, admin, token):
+def set_up_password(user_id, password, admin):
     print(f"start set up password with user_id: {user_id}, password: {password}")
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/reset-password"
     print(f"setup password url: {url}")
-    # token = get_token(admin)
+    token = get_token(admin)
 
     print(f"setup password token: {token}")
     headers = {
@@ -162,7 +162,7 @@ def create_user(data, admin):
                 print("warning: user not found when set password")
 
                 return
-            set_up_password(user_id, password, admin, token)
+            set_up_password(user_id, password, admin)
 
 
 @xray_recorder.capture("sync:: delete user")
