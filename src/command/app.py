@@ -258,9 +258,8 @@ def delete_user(event, table):
     table.put_item(Item=user)
     resp = table.update_item(
         Key={"id": f"user#{user_id}", "sk": "config"},
-        UpdateExpression="SET is_active = :r, command = :c, updated_at = :u, version = :v",
+        UpdateExpression="SET command = :c, updated_at = :u, version = :v REMOVE is_active",
         ExpressionAttributeValues={
-            ":r": "",
             ":c": "delete",
             ":v": f"{int(current_version) + 1}",
             ":u": int(time.time()),
