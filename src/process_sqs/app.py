@@ -249,7 +249,9 @@ def delete_member_group(data, admin):
     user_id = get_user_id(user_name, admin)
     group_id = get_group_id(group_name, admin)
 
-    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}/groups/{group_id}"
+    keycloak_url = admin["keycloak_url"]
+    keycloak_realm = admin["keycloak_realm"]
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/groups/{group_id}"
     token = get_token(admin)
 
     headers = {
