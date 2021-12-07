@@ -73,14 +73,11 @@ def create_user(event, table):
                 }
 
     if "password" in body:
-        params["password"] = body["password"]  # ToDo: encrypt password
+        params["password"] = encrypt(body["password"])  # ToDo: encrypt password
     if "first_name" in body:
         params["first_name"] = body["first_name"]
     if "last_name" in body:
         params["last_name"] = body["last_name"]
-
-    passwd = encrypt(params["password"])
-    params["password"] = passwd
 
     try:
         table.put_item(Item=params)
