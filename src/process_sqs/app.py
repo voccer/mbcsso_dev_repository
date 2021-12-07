@@ -5,7 +5,10 @@ import boto3
 import requests
 import ast
 
+from aws_xray_sdk.core import xray_recorder
 
+
+@xray_recorder.capture("decrypt password")
 def decrypt(password):
     res = ""
     for i in password:
@@ -13,6 +16,7 @@ def decrypt(password):
     return res
 
 
+@xray_recorder.capture("put password")
 def set_up_password(user_id, password, admin):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -32,6 +36,7 @@ def set_up_password(user_id, password, admin):
     ).status_code
 
 
+@xray_recorder.capture("get user_id keycloak")
 def get_user_id(username, admin):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -49,6 +54,7 @@ def get_user_id(username, admin):
     return requests.get(url=url, headers=headers).json()[0]["id"]
 
 
+@xray_recorder.capture("get group_id keycloak")
 def get_group_id(group_name, admin):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -66,6 +72,7 @@ def get_group_id(group_name, admin):
     return requests.get(url=url, headers=headers).json()[0]["id"]
 
 
+@xray_recorder.capture("get token admin account")
 def get_token(admin):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -86,6 +93,7 @@ def get_token(admin):
     )["access_token"]
 
 
+@xray_recorder.capture("sync:: create user")
 def create_user(data, admin):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -121,6 +129,7 @@ def create_user(data, admin):
             set_up_password(user_id, password, admin)
 
 
+@xray_recorder.capture("sync:: delete user")
 def delete_user(data, admin):
     username = data["id"]
     username = str(username).strip().split("#")[-1]
@@ -144,6 +153,7 @@ def delete_user(data, admin):
     requests.delete(url=url, headers=headers)
 
 
+@xray_recorder.capture("sync:: update user")
 def update_user(data, admin):
     username = data.get("id").strip().split("#")[-1]
 
@@ -177,6 +187,7 @@ def update_user(data, admin):
     ).status_code
 
 
+@xray_recorder.capture("sync:: create group")
 def create_group(data, admin):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -194,6 +205,7 @@ def create_group(data, admin):
     ).status_code
 
 
+@xray_recorder.capture("sync:: delete group")
 def delete_group(data, admin):
     group_name = data["id"]
     group_name = str(group_name).strip().split("#")[-1]
@@ -219,6 +231,7 @@ def delete_group(data, admin):
     return requests.delete(url=url, headers=headers).status_code
 
 
+@xray_recorder.capture("sync:: add member group")
 def create_member_group(data, admin):
     group_name = str(data["id"]).strip().split("#")[-1]
     user_name = str(data["sk"]).strip().split("#")[-1]
@@ -248,6 +261,7 @@ def create_member_group(data, admin):
     return requests.request("PUT", url=url, headers=headers).status_code
 
 
+@xray_recorder.capture("sync:: delete member group")
 def delete_member_group(data, admin):
     group_name = str(data["id"]).strip().split("#")[-1]
     user_name = str(data["sk"]).strip().split("#")[-1]
@@ -271,6 +285,7 @@ def delete_member_group(data, admin):
 ## ----------update to db---------------- ##
 
 
+@xray_recorder.capture("push db:: create data")
 def create_data(table_name, data):
     print(f"create_data: {table_name}")
     print(f"create_data: {data}")
@@ -301,7 +316,7 @@ def create_data(table_name, data):
 #     client = boto3.client("dynamodb")
 #     client.put_item(TableName=table_name, Item=data)
 
-
+@xray_recorder.capture("push db:: delete data")
 def delete_data(table_name, data):
     print(f"delete_data: {table_name}")
     print(f"delete_data: {data}")
@@ -309,6 +324,7 @@ def delete_data(table_name, data):
     client.delete_item(TableName=table_name, Key=data)
 
 
+@xray_recorder.capture("sync and put data to db")
 def lambda_handler(event, context):
     print(f"process sqs event: {event}")
     system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
