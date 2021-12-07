@@ -13,12 +13,13 @@ from aws_xray_sdk.core import xray_recorder
 def decrypt(password):
     res = ""
     for i in password:
-        res -= chr(ord(i) + 1)
+        res += chr(ord(i) - 1)
     return res
 
 
 @xray_recorder.capture("put password")
 def set_up_password(user_id, password, admin):
+    print(f"start set up password with user_id: {user_id}, password: {password}")
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
 
@@ -30,11 +31,11 @@ def set_up_password(user_id, password, admin):
         "Authorization": "Bearer " + str(token),
     }
     password = decrypt(password)
+    print(f"set up decrypted password::{password}")
     payload = {"type": "password", "value": password, "temporary": False}
 
-    return requests.request(
-        "PUT", url=url, headers=headers, json=payload, verify=False
-    ).status_code
+    response = requests.request("PUT", url=url, headers=headers, json=payload, verify=False)
+    print(f"set up password::{response.status_code}")
 
 
 @xray_recorder.capture("get user_id keycloak")
@@ -55,7 +56,7 @@ def get_user_id(username, admin):
     response = requests.get(url=url, headers=headers).json()
     if len(response) == 0:
         return None
-    
+
     return response[0]["id"]
 
 
@@ -77,7 +78,7 @@ def get_group_id(group_name, admin):
     response = requests.get(url=url, headers=headers).json()
     if len(response) == 0:
         return None
-    
+
     return response[0]["id"]
 
 
@@ -150,8 +151,8 @@ def create_user(data, admin):
             user_id = get_user_id(username, admin)
             if not user_id:
                 print("warning: user not found when set password")
-                
-                return 
+
+                return
             set_up_password(user_id, password, admin)
 
 
@@ -189,7 +190,7 @@ def update_user(data, admin):
     user_id = get_user_id(username, admin)
     if not user_id:
         print("user not found when update user")
-        return 
+        return
 
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -243,12 +244,12 @@ def delete_group(data, admin):
     group_name = str(group_name).strip().split("#")[-1]
 
     group_id = get_group_id(group_name, admin)
-    
+
     if not group_id:
         print("group not found")
-        
-        return 
-    
+
+        return
+
     print(group_name, group_id)
 
     token = get_token(admin)
@@ -276,10 +277,10 @@ def create_member_group(data, admin):
 
     user_id = get_user_id(user_name, admin)
     group_id = get_group_id(group_name, admin)
-    
+
     if not user_id or not group_id:
         print("user or group not found")
-        
+
         return
 
     keycloak_url = admin["keycloak_url"]
@@ -311,10 +312,10 @@ def delete_member_group(data, admin):
 
     user_id = get_user_id(user_name, admin)
     group_id = get_group_id(group_name, admin)
-    
-    if not user_id or not group_id: 
+
+    if not user_id or not group_id:
         print("user or group not found")
-               
+
         return
 
     keycloak_url = admin["keycloak_url"]
