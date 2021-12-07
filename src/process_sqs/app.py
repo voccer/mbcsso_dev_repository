@@ -366,7 +366,7 @@ def lambda_handler(event, context):
             event_name = mess["event_name"]
             data = mess["data"]
             region = os.environ.get("REGION", "ap-northeast-1")
-            table_name = f"{system_name}_{env}_{system_id}_{tenant_id}_Config"
+            table_name = f"{system_name}_{env}_Config"
 
             table = boto3.resource(
                 "dynamodb", region_name=region).Table(table_name)
