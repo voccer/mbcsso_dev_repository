@@ -24,17 +24,22 @@ def set_up_password(user_id, password, admin):
     keycloak_realm = admin["keycloak_realm"]
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/reset-password"
+    print(f"setup password url: {url}")
     token = get_token(admin)
 
+    print(f"setup password token: {token}")
     headers = {
         "content-type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
     password = decrypt(password)
+
     print(f"set up decrypted password::{password}")
     payload = {"type": "password", "value": password, "temporary": False}
 
-    response = requests.request("PUT", url=url, headers=headers, json=payload, verify=False)
+    response = requests.request(
+        "PUT", url=url, headers=headers, json=payload, verify=False
+    )
     print(f"set up password::{response.status_code}")
 
 
@@ -84,13 +89,16 @@ def get_group_id(group_name, admin):
 
 @xray_recorder.capture("get token admin account")
 def get_token(admin):
+    print(f"start get token with admin: {admin}")
+
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
     url = f"{keycloak_url}/auth/realms/{keycloak_realm}/protocol/openid-connect/token"
     client_id = admin["client_id"]
     username = admin["admin"]
     password = admin["password"]
-    # Todo: get plaintext password from kms
+
+    #  get plaintext password from kms
     kms_client = boto3.client("kms")
     system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
     env = os.environ.get("ENV", "dev")
@@ -100,6 +108,7 @@ def get_token(admin):
         KeyId=alias, CiphertextBlob=bytes(base64.b64decode(password))
     )
     password = password["Plaintext"].decode("utf-8")
+    print(f"plaintext password: {password}")
 
     params = {
         "client_id": client_id,
@@ -163,7 +172,7 @@ def delete_user(data, admin):
 
     user_id = get_user_id(username, admin)
     if not user_id:
-        print("user not found when delete user")
+        print(f"user not found when delete user{username}")
         return
 
     token = get_token(admin)
@@ -189,7 +198,7 @@ def update_user(data, admin):
 
     user_id = get_user_id(username, admin)
     if not user_id:
-        print("user not found when update user")
+        print(f"user not found when update user::{username}")
         return
 
     keycloak_url = admin["keycloak_url"]
