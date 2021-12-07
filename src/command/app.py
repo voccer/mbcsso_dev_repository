@@ -161,8 +161,10 @@ def update_user(event, table):
 
     if "password" in body:
         params["password"] = encrypt(body["password"])
-    params["first_name"] = body.get("first_name", "")
-    params["last_name"] = body.get("last_name", "")
+    else:
+        params["password"] = None
+    params["first_name"] = body.get("first_name", None)
+    params["last_name"] = body.get("last_name", None)
 
     expression_attribute_values = {
         ":c": "update",
