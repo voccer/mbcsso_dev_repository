@@ -51,7 +51,7 @@ def get_token():
 
 def create_user(data):
     url = "https://dev.sso-service.com/auth/admin/realms/dev/users"
-    username = data.get('id').strip()[5:]
+    username = data.get('id').strip().split("#")[-1]
     payload = {
         "enabled": True,
         "attributes": {},
@@ -71,7 +71,7 @@ def create_user(data):
     if "last_name" in data:
         payload["lastName"] = data["last_name"]
 
-    return requests.post(url, headers, payload, verify=False)
+    return requests.post(url=url, headers=headers, json=payload, verify=False).status_code
 
 
 def delete_user(data):
@@ -94,7 +94,30 @@ def delete_user(data):
 
 
 def update_user(data):
-    pass
+    username = data.get('id').strip().split("#")[-1]
+
+    user_id = get_user_id(username)
+
+    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}"
+
+    token = get_token()
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': 'Bearer ' + str(token)
+    }
+    payload = {
+        "username": username
+    }
+
+    if "last_name" in data:
+        payload["lastName"] = data["last_name"]
+    if "first_name" in data:
+        payload["firstName"] = data["first_name"]
+    if "email" in data:
+        payload["email"] = data["email"]
+
+    return requests.request("PUT", url=url, headers=headers, json=payload, verify=False).status_code
 
 
 def create_group(data):
@@ -106,10 +129,10 @@ def create_group(data):
         'Authorization': 'Bearer ' + str(token)
     }
     payload = {
-        "name": data.get('id').strip()[:5]
+        "name": data.get('id').strip()[6:]
     }
 
-    requests.post(url=url, data=payload, headers=headers)
+    return requests.request("POST", url, json=payload, headers=headers, verify=False).status_code
 
 
 def delete_group(data):
@@ -122,8 +145,9 @@ def delete_group(data):
     token = get_token()
 
     headers = {
-        'content-type': 'application/json',
-        'Authorization': 'Bearer ' + str(token)
+        'authorization': 'Bearer ' + str(token),
+        'content-type': "application/json",
+        'cache-control': "no-cache",
     }
 
     url = "https://dev.sso-service.com/auth/admin/realms/dev/groups/" + \
@@ -132,8 +156,48 @@ def delete_group(data):
     return requests.delete(url=url, headers=headers).status_code
 
 
-def update_group(data):
-    pass
+def create_member_group(data):
+    group_name = str(data["id"]).strip()[6:]
+    user_name = str(data["sk"]).strip()[7:]
+
+    user_id = get_user_id(user_name)
+    group_id = get_group_id(group_name)
+
+    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}/groups/{group_id}"
+    token = get_token()
+
+    headers = {
+        'authorization': 'Bearer ' + str(token),
+        'content-type': "application/json",
+        'cache-control': "no-cache",
+    }
+    # payload = {
+    #     "realms": "dev",
+    #     "userID": user_id,
+    #     "groupID": group_id
+    # }
+    # return requests.request("PUT", url=url, headers=headers,
+    #                         json=payload, verify=False).status_code
+
+    return requests.request("PUT", url=url, headers=headers).status_code
+
+
+def delete_member_group(data):
+    group_name = str(data["id"]).strip()[6:]
+    user_name = str(data["sk"]).strip()[7:]
+
+    user_id = get_user_id(user_name)
+    group_id = get_group_id(group_name)
+
+    url = f"https://dev.sso-service.com/auth/admin/realms/dev/users/{user_id}/groups/{group_id}"
+    token = get_token()
+
+    headers = {
+        'authorization': 'Bearer ' + str(token),
+        'content-type': "application/json",
+        'cache-control': "no-cache",
+    }
+    return requests.request("DELETE", url=url, headers=headers).status_code
 
 
 def create_data(table_name, data):
@@ -210,23 +274,31 @@ def lambda_handler(event, context):
             data = mess["data"]
 
             if event_name == "INSERT":
-                sk = data["sk"]
-                pk = data["id"]
+                sk = str(data["sk"]).strip().split("#")[0]
+                pk = str(data["id"]).strip().split("#")[0]
                 if str(sk).strip() == "config":
-                    if str(pk)[:4] == "user":
+                    if str(pk) == "user":
                         create_user(data)
                     else:
                         create_group(data)
+                if sk == "member":
+                    create_member_group(data)
             elif event_name == "MODIFY":
-                pass
+                sk = str(data["sk"]).split("#")[0]
+                pk = str(data["id"]).split("#")[0]
+                if sk == "config":
+                    if pk == "user":
+                        update_user(data)
             elif event_name == "REMOVE":
-                sk = data["sk"]
-                pk = data["id"]
+                sk = str(data["sk"]).strip().split("#")[0]
+                pk = str(data["id"]).strip().split("#")[0]
                 if str(sk).strip() == "config":
                     if str(pk)[:4] == "user":
                         delete_user(data)
                     else:
                         delete_group(data)
+                if sk == "member":
+                    delete_member_group(data)
 
     # TODO: push to eventbridge
 
