@@ -53,7 +53,7 @@ def create_sso(event):
     response = config_table.put_item(TableName=config_table_name, Item=params)
     print("response")
     print(response)
-    
+
     return
 
 

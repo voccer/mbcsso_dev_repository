@@ -65,8 +65,7 @@ def search_user(event, table):
         print(f"email:: {email}")
         resp = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(
-                email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
         )
         if resp.get("Items", None) is not None:
             items = resp["Items"]
@@ -97,8 +96,7 @@ def search_user(event, table):
         print(f"last_name_contains:: {last_name_contains}")
         resp = table.scan(
             IndexName="UserLastNameGSI",
-            FilterExpression=Attr('last_name').begins_with(
-                last_name_contains)
+            FilterExpression=Attr("last_name").begins_with(last_name_contains),
         )
         items = resp["Items"]
     elif "first_name_contains" in query_params:
@@ -106,12 +104,14 @@ def search_user(event, table):
         print(f"first_name_contains:: {first_name_contains}")
         resp = table.scan(
             IndexName="UserFirstNameGSI",
-            FilterExpression=Attr('first_name').begins_with(
-                first_name_contains)
+            FilterExpression=Attr("first_name").begins_with(first_name_contains),
         )
         items = resp["Items"]
     else:
-        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+        }
     items_resp = []
 
     for item in items:
@@ -139,28 +139,34 @@ def get_group(event, table):
     path_params = event.get("pathParameters", "")
     print(f"params:: {path_params}")
     if path_params == "":
-        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+        }
 
     group_id = path_params["group_id"]
 
     print("pass get infor")
 
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
         if str(is_active).strip() != "1":
             print("check_group:: not active")
-            return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "group not exist"})}
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
+            }
     else:
         print("check_group:: not exist")
-        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "group not exist"})}
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
+        }
 
     group = check_group.get("Item")
-    group_resp = {
-        "groupname": f"group_id"
-    }
+    group_resp = {"groupname": f"group_id"}
     group_resp["description"] = group.get("description", "")
     return {"statusCode": 200, "body": json.dumps({"code": "ok", "data": group_resp})}
 
@@ -170,24 +176,36 @@ def search_user_group(event, table):
     path_params = event.get("pathParameters", "")
     print(f"params:: {path_params}")
     if path_params == "":
-        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+        }
     if "user_id" not in path_params:
-        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"})}
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+        }
 
     user_id = path_params["user_id"]
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
     if check_user.get("Item", None) is None:
-        return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "user not exist"})}
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"code": "E_INVALID", "message": "user not exist"}),
+        }
     else:
         is_active = check_user.get("Item").get("is_active", "")
         if str(is_active).strip() != "1":
-            return {"statusCode": 400, "body": json.dumps({"code": "E_INVALID", "message": "user invalid"})}
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"code": "E_INVALID", "message": "user invalid"}),
+            }
 
     resp = table.query(
         IndexName="UserGroupGSI",
-        KeyConditionExpression=Key('member_id').eq(
-            f"member#{user_id}") & Key('id').begins_with('group#')
+        KeyConditionExpression=Key("member_id").eq(f"member#{user_id}")
+        & Key("id").begins_with("group#"),
     )
     items = resp.get("Items", None)
     print(f"Items:: {items}")
@@ -197,14 +215,15 @@ def search_user_group(event, table):
             pk = item["id"]
             sk = f"config"
             print(f"id:: {pk}, sk:: {sk}")
-            group_resp = table.get_item(
-                Key={"id": pk, "sk": sk})
+            group_resp = table.get_item(Key={"id": pk, "sk": sk})
             group = group_resp.get("Item", None)
             if group is not None:
-                data.append({
-                    "groupname": group["id"][6:],
-                    "description": group.get("description", "")
-                })
+                data.append(
+                    {
+                        "groupname": group["id"][6:],
+                        "description": group.get("description", ""),
+                    }
+                )
     return {"statusCode": 200, "body": json.dumps({"code": "ok", "data": data})}
 
 

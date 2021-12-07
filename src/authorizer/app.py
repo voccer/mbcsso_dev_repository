@@ -31,13 +31,13 @@ def check_allow_to_access(roles, action, preferred_username):
             is_admin = False
     if is_admin:
         return True
-    
+
     ## users only get or update themselves
     if action.startswith("get_user#") or action.startswith("update_user#"):
-        user_id=action.split("#")[1]
+        user_id = action.split("#")[1]
         if user_id == preferred_username:
             return True
-        
+
     return False
 
 
@@ -84,14 +84,16 @@ def check_authorization(
 
     if access_token == "secret":
         return True
-    headers={"Authorization": f"Bearer {access_token}"}
-    payload={}
-    response = requests.request("GET", url=keycloak_userinfo_url, headers=headers, data=payload)
+    headers = {"Authorization": f"Bearer {access_token}"}
+    payload = {}
+    response = requests.request(
+        "GET", url=keycloak_userinfo_url, headers=headers, data=payload
+    )
     if response.status_code != 200:
         return False
-    
+
     preferred_username = response.json().get("preferred_username", "")
-    
+
     payload = jwt.decode(access_token, verify=False)
     roles = []
     if "resource_access" in payload:
@@ -102,7 +104,7 @@ def check_authorization(
 
     if not is_allow_to_access:
         return False
-    
+
     return True
 
 
@@ -122,9 +124,9 @@ def lambda_handler(event, context):
     route_key = event["requestContext"]["routeKey"]
 
     method, path = route_key.split(" ")
-    
-    user_id=event["pathParameters"].get("user_id", "")
-    
+
+    user_id = event["pathParameters"].get("user_id", "")
+
     action = ""
     if method == "POST" and path == "/users":
         action = "create_user"
