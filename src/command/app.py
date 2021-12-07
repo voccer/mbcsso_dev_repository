@@ -158,11 +158,15 @@ def update_user(event, table):
                         {"code": "E_INVALID", "message": "email already exist"}
                     ),
                 }
+    else:
+        params["email"] = None
 
     if "password" in body:
         params["password"] = encrypt(body["password"])
-    params["first_name"] = body.get("first_name", "")
-    params["last_name"] = body.get("last_name", "")
+    else:
+        params["password"] = None
+    params["first_name"] = body.get("first_name", None)
+    params["last_name"] = body.get("last_name", None)
 
     expression_attribute_values = {
         ":c": "update",
@@ -229,7 +233,7 @@ def delete_user(event, table):
         if str(is_active).strip() != "1":
             return {
                 "statusCode": 400,
-                "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+                "body": json.dumps({"code": "E_INVALID", "message": "user is not active"}),
             }
 
     user = check_user.get("Item")
@@ -254,9 +258,8 @@ def delete_user(event, table):
     table.put_item(Item=user)
     resp = table.update_item(
         Key={"id": f"user#{user_id}", "sk": "config"},
-        UpdateExpression="SET is_active = :r, command = :c, updated_at = :u, version = :v",
+        UpdateExpression="SET command = :c, updated_at = :u, version = :v REMOVE is_active",
         ExpressionAttributeValues={
-            ":r": "",
             ":c": "delete",
             ":v": f"{int(current_version) + 1}",
             ":u": int(time.time()),
