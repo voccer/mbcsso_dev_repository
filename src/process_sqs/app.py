@@ -6,6 +6,13 @@ import requests
 import ast
 
 
+def decrypt(password):
+    res = ""
+    for i in password:
+        res -= chr(ord(i) + 1)
+    return res
+
+
 def set_up_password(user_id, password, admin):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -17,6 +24,7 @@ def set_up_password(user_id, password, admin):
         "content-type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
+    password = decrypt(password)
     payload = {"type": "password", "value": password, "temporary": False}
 
     return requests.request(
