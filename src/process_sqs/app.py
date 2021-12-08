@@ -145,7 +145,7 @@ def create_user(data, admin):
     if "last_name" in data:
         payload["lastName"] = data["last_name"]["S"]
     if "attributes" in data:
-        payload["attributes"] = data["attributes"]["S"]
+        payload["attributes"] = data["attributes"]["M"]
     else:
         payload["attributes"] = {}
 
@@ -453,15 +453,15 @@ def lambda_handler(event, context):
                     else:
                         create_group(data, admin)
                 if "member" in sk:
-                    print(f"function:: create member group")
+                    print(f"function:: create member group insert")
                     create_member_group(data, admin)
             elif event_name == "MODIFY":
                 if sk == "config":
                     if pk == "user":
                         update_user(data, admin)
-                # if "member" in sk:
-                #     print(f"function:: create member group")
-                #     create_member_group(data, admin)
+                if "member" in sk:
+                    print(f"function:: create member group modify")
+                    create_member_group(data, admin)
             elif event_name == "REMOVE":
                 if sk == "config":
                     if pk == "user":
