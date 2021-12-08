@@ -452,23 +452,23 @@ def lambda_handler(event, context):
                         create_user(data, admin)
                     else:
                         create_group(data, admin)
-                if sk == "member":
+                if "member" in sk:
                     print(f"function:: create member group")
                     create_member_group(data, admin)
             elif event_name == "MODIFY":
                 if sk == "config":
                     if pk == "user":
                         update_user(data, admin)
-                if sk == "member":
-                    print(f"function:: create member group")
-                    create_member_group(data, admin)
+                # if "member" in sk:
+                #     print(f"function:: create member group")
+                #     create_member_group(data, admin)
             elif event_name == "REMOVE":
                 if sk == "config":
                     if pk == "user":
                         delete_user(data, admin)
                     else:
                         delete_group(data, admin)
-                if sk == "member":
+                if "member" in sk:
                     delete_member_group(data, admin)
 
     # TODO: push to eventbridge
