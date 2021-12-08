@@ -139,7 +139,7 @@ def create_user(data, admin):
         "Content-Type": "application/json",
         "Authorization": "Bearer " + str(token),
     }
-
+    print(f"sync create user payload:: {data}")
     if "first_name" in data:
         payload["firstName"] = data["first_name"]["S"]
     if "last_name" in data:
@@ -148,7 +148,7 @@ def create_user(data, admin):
         payload["attributes"] = data["attributes"]["M"]
     else:
         payload["attributes"] = {}
-    print(f"sync create user:: {payload}")
+    print(f"sync create user payload:: {payload}")
 
     code = requests.post(
         url=url, headers=headers, json=payload, verify=False
