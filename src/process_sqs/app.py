@@ -459,6 +459,9 @@ def lambda_handler(event, context):
                 if sk == "config":
                     if pk == "user":
                         update_user(data, admin)
+                if sk == "member":
+                    print(f"function:: create member group")
+                    create_member_group(data, admin)
             elif event_name == "REMOVE":
                 if sk == "config":
                     if pk == "user":
