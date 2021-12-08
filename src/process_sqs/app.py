@@ -290,6 +290,7 @@ def create_member_group(data, admin):
 
     user_id = get_user_id(user_name, admin, token)
     group_id = get_group_id(group_name, admin, token)
+    print(f"funct member: {user_id} group: {group_id}")
 
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -452,6 +453,7 @@ def lambda_handler(event, context):
                     else:
                         create_group(data, admin)
                 if sk == "member":
+                    print(f"function:: create member group")
                     create_member_group(data, admin)
             elif event_name == "MODIFY":
                 if sk == "config":
