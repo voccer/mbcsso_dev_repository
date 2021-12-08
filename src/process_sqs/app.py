@@ -148,6 +148,7 @@ def create_user(data, admin):
         payload["attributes"] = data["attributes"]["M"]
     else:
         payload["attributes"] = {}
+    print(f"sync create user:: {payload}")
 
     code = requests.post(
         url=url, headers=headers, json=payload, verify=False
@@ -452,14 +453,14 @@ def lambda_handler(event, context):
                         create_user(data, admin)
                     else:
                         create_group(data, admin)
-                if "member" in sk:
+                if sk.startswith("member"):
                     print(f"function:: create member group insert")
                     create_member_group(data, admin)
             elif event_name == "MODIFY":
                 if sk == "config":
                     if pk == "user":
                         update_user(data, admin)
-                if "member" in sk:
+                if sk.startswith("member"):
                     print(f"function:: create member group modify")
                     create_member_group(data, admin)
             elif event_name == "REMOVE":
@@ -468,7 +469,7 @@ def lambda_handler(event, context):
                         delete_user(data, admin)
                     else:
                         delete_group(data, admin)
-                if "member" in sk:
+                if sk.startswith("member"):
                     delete_member_group(data, admin)
 
     # TODO: push to eventbridge
