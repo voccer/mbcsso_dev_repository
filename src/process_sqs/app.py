@@ -445,7 +445,7 @@ def lambda_handler(event, context):
             pk = str(data["id"]["S"]).strip().split("#")[0]
             if sk.startswith("config#"):
                 continue
-
+            print(f"sk: {sk}\pk: {pk}")
             if event_name == "INSERT":
                 if sk == "config":
                     if pk == "user":
