@@ -44,6 +44,7 @@ def get_user(event, table):
             data["email"] = item.get("email", "")
             data["first_name"] = item.get("first_name", "")
             data["last_name"] = item.get("last_name", "")
+            data["attributes"] = item.get("attributes", {})
 
             return {"statusCode": 200, "body": json.dumps({"code": "ok", "data": data})}
 
@@ -65,7 +66,8 @@ def search_user(event, table):
         print(f"email:: {email}")
         resp = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(
+                email) & Key("sk").eq("config"),
         )
         if resp.get("Items", None) is not None:
             items = resp["Items"]
@@ -104,7 +106,8 @@ def search_user(event, table):
         print(f"first_name_contains:: {first_name_contains}")
         resp = table.scan(
             IndexName="UserFirstNameGSI",
-            FilterExpression=Attr("first_name").begins_with(first_name_contains),
+            FilterExpression=Attr("first_name").begins_with(
+                first_name_contains),
         )
         items = resp["Items"]
     else:
@@ -123,6 +126,7 @@ def search_user(event, table):
             item_filter["email"] = item.get("email", "")
             item_filter["first_name"] = item.get("first_name", "")
             item_filter["last_name"] = item.get("last_name", "")
+            item_filter["attributes"] = item.get("attributes", {})
 
             items_resp.append(item_filter)
     print(f"item_resp:: {items_resp}")
@@ -148,7 +152,8 @@ def get_group(event, table):
 
     print("pass get infor")
 
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")

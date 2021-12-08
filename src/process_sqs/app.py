@@ -19,13 +19,13 @@ def decrypt(password):
 
 @xray_recorder.capture("put password")
 def set_up_password(user_id, password, admin, token):
-    print(f"start set up password with user_id: {user_id}, password: {password}")
+    print(
+        f"start set up password with user_id: {user_id}, password: {password}")
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/reset-password"
     print(f"setup password url: {url}")
-    
 
     print(f"setup password token: {token}")
     headers = {
@@ -71,7 +71,6 @@ def get_group_id(group_name, admin, token):
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}dev/groups?search=" + str(
         group_name
     )
-
 
     headers = {
         "Content-Type": "application/json",
@@ -130,7 +129,6 @@ def create_user(data, admin):
     username = data["id"]["S"].strip().split("#")[-1]
     payload = {
         "enabled": True,
-        "attributes": {},
         "groups": [],
         "emailVerified": "",
         "username": username,
@@ -146,6 +144,10 @@ def create_user(data, admin):
         payload["firstName"] = data["first_name"]["S"]
     if "last_name" in data:
         payload["lastName"] = data["last_name"]["S"]
+    if "attributes" in data:
+        payload["attributes"] = data["attributes"]["S"]
+    else:
+        payload["attributes"] = {}
 
     code = requests.post(
         url=url, headers=headers, json=payload, verify=False
@@ -169,7 +171,7 @@ def delete_user(data, admin):
     print(f"delete user with pre-username: {username}")
     username = str(username).strip().split("#")[-1]
     print(f"delete user with after-username: {username}")
-    
+
     token = get_token(admin)
 
     user_id = get_user_id(username, admin, token)
@@ -309,7 +311,7 @@ def create_member_group(data, admin):
     #     "userID": user_id,
     #     "groupID": group_id
     # }
-    
+
     return requests.request("PUT", url=url, headers=headers).status_code
 
 
@@ -429,8 +431,10 @@ def lambda_handler(event, context):
             region = os.environ.get("REGION", "ap-northeast-1")
             table_name = f"{system_name}_{env}_Config"
 
-            table = boto3.resource("dynamodb", region_name=region).Table(table_name)
-            resp = table.get_item(Key={"system_id": system_id, "tenant_id": tenant_id})
+            table = boto3.resource(
+                "dynamodb", region_name=region).Table(table_name)
+            resp = table.get_item(
+                Key={"system_id": system_id, "tenant_id": tenant_id})
 
             admin = resp.get("Item")
 
@@ -440,7 +444,7 @@ def lambda_handler(event, context):
             pk = str(data["id"]["S"]).strip().split("#")[0]
             if sk.startswith("config#"):
                 continue
-            
+
             if event_name == "INSERT":
                 if sk == "config":
                     if pk == "user":

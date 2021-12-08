@@ -48,9 +48,9 @@ def create_user(event, table):
         "id": "user#" + body["username"],
         "sk": "config",
         "command": "add",
-        "sso_type": "keycloak", # default sso type to keycloak
+        "sso_type": "keycloak",  # default sso type to keycloak
         "is_active": 1,
-        "version": 1, # always set version to 1 when create user with command add
+        "version": 1,  # always set version to 1 when create user with command add
         "updated_at": int(time.time()),
     }
 
@@ -73,11 +73,14 @@ def create_user(event, table):
                 }
 
     if "password" in body:
-        params["password"] = encrypt(body["password"])  # ToDo: encrypt password
+        params["password"] = encrypt(
+            body["password"])  # ToDo: encrypt password
     if "first_name" in body:
         params["first_name"] = body["first_name"]
     if "last_name" in body:
         params["last_name"] = body["last_name"]
+    if "attributes" in body:
+        params["attributes"] = body["attributes"]
 
     try:
         table.put_item(Item=params)
@@ -144,7 +147,8 @@ def update_user(event, table):
         email = params["email"]
         check_email = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(
+                email) & Key("sk").eq("config"),
         )
         if check_email.get("Count") > 0:
             is_active = check_email["Items"][0].get("is_active", "")
@@ -279,7 +283,8 @@ def create_group(event, table):
         }
 
     group_id = body["groupname"]
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group.get("is_active", "")
@@ -343,7 +348,8 @@ def update_group(event, table):
         }
 
     group_id = raw_path.split("/")[-1]
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -402,7 +408,8 @@ def delete_group(event, table):
 
     group_id = raw_path.split("/")[-1]
 
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
     if check_group.get("Item", None) is None:
         return {
             "statusCode": 400,
@@ -473,7 +480,8 @@ def add_group_member(event, table):
     print("pass get infor")
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -546,7 +554,8 @@ def delete_group_member(event, table):
     print("pass get infor")
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -585,7 +594,8 @@ def delete_group_member(event, table):
             "body": json.dumps({"code": "E_INVALID", "message": "user not in group"}),
         }
 
-    resp = table.delete_item(Key={"id": f"group#{group_id}", "sk": f"member#{user_id}"})
+    resp = table.delete_item(
+        Key={"id": f"group#{group_id}", "sk": f"member#{user_id}"})
     return {
         "statusCode": 200,
         "body": json.dumps({"code": "ok", "message": "delete member group"}),
