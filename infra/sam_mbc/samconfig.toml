@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "mbcsso-dev-sam"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-15wy90y4nj0it"
+s3_prefix = "mbcsso-dev-sam"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "SystemName=\"mbcsso\" Env=\"dev\" LatestDockerTag=\"latest\" GitHubOwner=\"voccer\" GitHubRepo=\"mbcsso_dev_repository\" GitHubBranch=\"master\" ConnectionId=\"\" BuildSpecFilePath=\"buildspec.yaml\" RetentionInDays=\"180\" ReadCapacityUnits=\"5\" WriteCapacityUnits=\"5\" BatchSize=\"1\""
+image_repositories = ["AuthFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/mbcssodevsam969f5a6b/authfunctiona88a6b13repo", "CommandFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/mbcssodevsam969f5a6b/commandfunctioncb0fda33repo", "QueryFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/mbcssodevsam969f5a6b/queryfunction87654789repo", "ProcessStreamFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/mbcssodevsam969f5a6b/processstreamfunctionb8381f90repo", "ProcessSQSFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/mbcssodevsam969f5a6b/processsqsfunctione995b6c6repo", "WaitSQSConsumerFunction=465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/mbcssodevsam969f5a6b/waitsqsconsumerfunction873ce1cerepo"]

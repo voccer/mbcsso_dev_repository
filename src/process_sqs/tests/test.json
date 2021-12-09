@@ -1,0 +1,29 @@
+{
+  "Records": [
+    {
+      "messageId": "127e4af4-79c0-4314-8098-cf0720ce8e2e",
+      "receiptHandle": "AQEBdXUtg1or2kKv7AYGJFvT6zjOar13TAFYcum+Cq3wFGosWvHnaSxwGeY2cyEkFM3YcqMTKUNJg1xxxGaY25sKHje0wjQq4cJAM+U0lZPNl1pMnasqXvHzzcIy53OOXJIGx1YQFXRW/O0QNGVOCwXq/I8uCx09EvEkiYmVLTvI3daQF6Bt2xZ+sSDCZQcLA5EzE80rQF9lGmSCSZjVYSdznYVJ9eEkgqJyXVLFPMUkmtzUQwoHvzK13skNdwQ9JuxHI8bjJ3JaNOs8aftskRo58J7o5qniEDaYnAVF5zpZUZUGZM3dhFxxOl9Klu9yV/NbdcZolFBj9lgFjCwTkL71emXEWxH0Yyar9sF7PznoQAskoPa8waytfgc91o4QWquwTpuVP3dHsvgCfvxpqbjXig==",
+      "body": "{\n  "Type" : "Notification",\n  "MessageId" : "31abb82e-86f8-5f9a-a601-e20d625460e8",\n  "TopicArn" : "arn:aws:sns:ap-northeast-1: 465316005105:mbcsso_dev_topic",\n  "Message" : "[
+        {\\"event\\": \\"INSERT\\", \\"data\\": {\\"is_active\\": {\\"N\\": \\"1\\"
+            }, \\"sso_type\\": {\\"S\\": \\"keycloak\\"
+            }, \\"updated_at\\": {\\"N\\": \\"1638523470\\"
+            }, \\"sk\\": {\\"S\\": \\"config#4\\"
+            }, \\"description\\": {\\"S\\": \\"sales3 department edit2\\"
+            }, \\"id\\": {\\"S\\": \\"group#sales3\\"
+            }, \\"version\\": {\\"S\\": \\"4\\"
+            }, \\"command\\": {\\"S\\": \\"update\\"
+            }
+          }
+        },
+        {\\"event\\": \\"MODIFY\\", \\"data\\": {\\"is_active\\": {\\"S\\": \\"\\"
+            }, \\"sso_type\\": {\\"S\\": \\"keycloak\\"
+            }, \\"updated_at\\": {\\"N\\": \\"1638523499\\"
+            }, \\"sk\\": {\\"S\\": \\"config\\"
+            }, \\"description\\": {\\"S\\": \\"sales3 department edit2\\"
+            }, \\"id\\": {\\"S\\": \\"group#sales3\\"
+            }, \\"version\\": {\\"S\\": \\"5\\"
+            }, \\"command\\": {\\"S\\": \\"delete\\"
+            }
+          }
+        }
+      ]",\n  "Timestamp" : "2021-12-03T09: 25: 00.173Z",\n  "SignatureVersion" : "1",\n  "Signature" : "XguMErp3zQmlNJvt4B29XzvsnWarSNdNJTni7jcc4vOUDJFcpLdb/hz6xjxRxSWtPi3I4jVHrkGgdevC3tIpJl3/aC0yV39vX7QgXAd8xMw4+R67diMReDbv88YAtii0W3HqEHZDHpJj1/ITQBxtrXC/G2QxLnz0vR+Q4fUipUJrt8zpywN+RD5u5tMxnItlS/9sraOCjqUM5ARkd7PPP2YLfEwH6jXsEEip+8IZf/SLLDXtxCzul90ARP5Lkl/8w3A0j41c34Z2hTfbV6uH0+EfrzlbiFoTU9L/qLOTEipTnX5ZNYTHhMrHEGcpakh1VQLhmLUi67m/bi6Ivw1R9Q==",\n  "SigningCertURL" : "https: //sns.ap-northeast-1.amazonaws.com/SimpleNotificationService-7ff5318490ec183fbaddaa2a969abfda.pem",\n  "UnsubscribeURL" : "https://sns.ap-northeast-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:ap-northeast-1:465316005105:mbcsso_dev_topic:f7de5de9-3580-4c33-bd36-c062d452ac2a"\n}", "attributes": {"ApproximateReceiveCount": "1", "SentTimestamp": "1638523500227", "SenderId": "AIDAIERWYNSNBY7YRB6SY", "ApproximateFirstReceiveTimestamp": "1638523500228"}, "messageAttributes": {}, "md5OfBody": "1632f2b3c762d9336874e450c8d7de00", "eventSource": "aws:sqs", "eventSourceARN": "arn:aws:sqs:ap-northeast-1:465316005105:mbcsso_dev_queue", "awsRegion": "ap-northeast-1"}]}
