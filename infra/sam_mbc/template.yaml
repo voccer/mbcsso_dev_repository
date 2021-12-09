@@ -348,7 +348,7 @@ Resources:
       Endpoint: !GetAtt SQSQueue.Arn
       Protocol: sqs
       FilterPolicy:
-        sso-type:
+        sso_type:
           - keycloak
 
   # Policy allows SNS to publish to this SQS queue
