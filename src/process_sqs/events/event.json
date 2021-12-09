@@ -1,63 +1,9 @@
 {
-    "body": "{\"message\": \"hello world\"}",
-    "resource": "/{proxy+}",
-    "path": "/path/to/resource",
-    "httpMethod": "POST",
-    "isBase64Encoded": false,
-    "queryStringParameters": {
-      "foo": "bar"
-    },
-    "pathParameters": {
-      "proxy": "/path/to/resource"
-    },
-    "stageVariables": {
-      "baz": "qux"
-    },
-    "headers": {
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-      "Accept-Encoding": "gzip, deflate, sdch",
-      "Accept-Language": "en-US,en;q=0.8",
-      "Cache-Control": "max-age=0",
-      "CloudFront-Forwarded-Proto": "https",
-      "CloudFront-Is-Desktop-Viewer": "true",
-      "CloudFront-Is-Mobile-Viewer": "false",
-      "CloudFront-Is-SmartTV-Viewer": "false",
-      "CloudFront-Is-Tablet-Viewer": "false",
-      "CloudFront-Viewer-Country": "US",
-      "Host": "1234567890.execute-api.us-east-1.amazonaws.com",
-      "Upgrade-Insecure-Requests": "1",
-      "User-Agent": "Custom User Agent String",
-      "Via": "1.1 08f323deadbeefa7af34d5feb414ce27.cloudfront.net (CloudFront)",
-      "X-Amz-Cf-Id": "cDehVQoZnx43VYQb9j2-nvCh-9z396Uhbp027Y2JvkCPNLmGJHqlaA==",
-      "X-Forwarded-For": "127.0.0.1, 127.0.0.2",
-      "X-Forwarded-Port": "443",
-      "X-Forwarded-Proto": "https"
-    },
-    "requestContext": {
-      "accountId": "123456789012",
-      "resourceId": "123456",
-      "stage": "prod",
-      "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef",
-      "requestTime": "09/Apr/2015:12:34:56 +0000",
-      "requestTimeEpoch": 1428582896000,
-      "identity": {
-        "cognitoIdentityPoolId": null,
-        "accountId": null,
-        "cognitoIdentityId": null,
-        "caller": null,
-        "accessKey": null,
-        "sourceIp": "127.0.0.1",
-        "cognitoAuthenticationType": null,
-        "cognitoAuthenticationProvider": null,
-        "userArn": null,
-        "userAgent": "Custom User Agent String",
-        "user": null
-      },
-      "path": "/prod/path/to/resource",
-      "resourcePath": "/{proxy+}",
-      "httpMethod": "POST",
-      "apiId": "1234567890",
-      "protocol": "HTTP/1.1"
+  "Records": [
+    {
+      "messageId": "893b336d-c3a1-41f6-b04a-ffd45e6d89c9",
+      "receiptHandle": "AQEBVt32M7A7coJk5L/lsGc/VjB92GxvaNOcnAwpjlYg8mOZ+i/81XFAixWTAsvh6IEZKKMLVDZW/pkeNhJYdDirDYBAxiAcIcIPCxp3wNgEhhOknEnmRai4To+m2+JzXTZxw2l4B6TpZIokEZ905qDi3jONSPXs+UoElEDzUgCWkR8Nx4DjtDwtYT68TF5LFYZm2TcCfV6UaMAKnebrP6Yz8s8kfyW5u4CSsUBovN4CuRysdz8/4/ttBaVjmQtw1T24YP9eTHCRAo6mTXuQs09aEuVTcKLIHTzZN7qRjRcUd5NHzie7llK29C5qZmAr8ZmC6QVG0ltPAIZWsevPB5nDO9s6crB302hce5bUGOMgOtyOJobyH6eIQttStZGSZwm/jxYcMxD+V0q3pc3gIQcXjQ==",
+      "body": "{\n  \"Type\" : \"Notification\",\n  \"MessageId\" : \"6975dd83-aaab-52d1-aa89-87afe2b41602\",\n  \"TopicArn\" : \"arn:aws:sns:ap-northeast-1: 465316005105:mbcsso_dev_topic\",\n  \"Message\" : \"a, b, keycloak\",\n  \"Timestamp\" : \"2021-12-09T18: 07: 27.691Z\",\n  \"SignatureVersion\" : \"1\",\n  \"Signature\" : \"CbUoxboANc+wLqYUP6Y5NPvhs2przY8LS71d9T2/AQkq6jDrBeThBti8XBw1NmbnlX5bx3vH/BJIFkmTi4tgYIhQrveaH6Rk1+ASIcuhqMvcNceGVj4ySo49tKV1lxmmLlZ8pWpqqQOApzeyfwNKadkw3F63+/w6y5hv5400A4i61TwbZWGBDcrByO/fjQ6u8UoAvZH88lq7DUfAoxEumc7pq+HEEFwQonxhx8O5FRJalAUXEvC1YYQAY8pMyNlG5a2oaa9Rzhkbryd7Ld1itziCTpUJd6y7Jw/Xzfx/HxiMDHUuvWHtRgti0W3QkxopMvVEbfE8631QuMyY9scHPg==\",\n  \"SigningCertURL\" : \"https: //sns.ap-northeast-1.amazonaws.com/SimpleNotificationService-7ff5318490ec183fbaddaa2a969abfda.pem\",\n  \"UnsubscribeURL\" : \"https://sns.ap-northeast-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:ap-northeast-1:465316005105:mbcsso_dev_topic:55674daa-0a94-4ce4-9776-5d9219df7c45\",\n  \"MessageAttributes\" : {\n    \"sso_type\" : {\"Type\":\"String\",\"Value\":\"keycloak\"}\n  }\n}\", \"attributes\": {\"ApproximateReceiveCount\": \"51\", \"SentTimestamp\": \"1639073247749\", \"SenderId\": \"AIDAIERWYNSNBY7YRB6SY\", \"ApproximateFirstReceiveTimestamp\": \"1639073247749\"}, \"messageAttributes\": {}, \"md5OfBody\": \"c5dc50d3e760bf44663d7d798f89e4d3\", \"eventSource\": \"aws:sqs\", \"eventSourceARN\": \"arn:aws:sqs:ap-northeast-1:465316005105:mbcsso_dev_queue\", \"awsRegion\": \"ap-northeast-1\"}]}"
     }
-  }
-  
+  ]
+}
