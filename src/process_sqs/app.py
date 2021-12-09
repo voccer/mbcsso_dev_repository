@@ -102,8 +102,8 @@ def get_token(admin):
     password = admin["password"]
 
     #  get plaintext password from kms
-    system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
+    system_name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
     alias = f"alias/{system_name}_{env}_key_{username}"
 
     kms_client = boto3.client("kms")
@@ -371,9 +371,9 @@ def delete_data(table_name, data):
 @xray_recorder.capture("sync and put data to db")
 def lambda_handler(event, context):
     print(f"process sqs event: {event}")
-    system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
-    region = os.environ.get("REGION", "ap-northeast-1")
+    system_name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
+    region = os.environ.get("REGION")
 
     config_table_name = f"{system_name}_{env}_Config"
     config_table = boto3.resource("dynamodb", region_name=region).Table(

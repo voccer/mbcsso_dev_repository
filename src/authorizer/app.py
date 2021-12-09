@@ -114,8 +114,8 @@ def check_authorization(
 @xray_recorder.capture("authorizer")
 def lambda_handler(event, context):
     print(f"authorizer event: {event}")
-    name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
+    name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
     region = os.environ.get("REGION", "ap-northeast-1")
     config_table_name = "{}_{}_Config".format(name, env)
     access_token = event["headers"].get("authorization")

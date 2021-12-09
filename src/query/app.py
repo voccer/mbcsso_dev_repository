@@ -67,8 +67,7 @@ def search_user(event, table):
         print(f"email:: {email}")
         resp = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(
-                email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
         )
         if resp.get("Items", None) is not None:
             items = resp["Items"]
@@ -107,8 +106,7 @@ def search_user(event, table):
         print(f"first_name_contains:: {first_name_contains}")
         resp = table.scan(
             IndexName="UserFirstNameGSI",
-            FilterExpression=Attr("first_name").begins_with(
-                first_name_contains),
+            FilterExpression=Attr("first_name").begins_with(first_name_contains),
         )
         items = resp["Items"]
     else:
@@ -154,8 +152,7 @@ def get_group(event, table):
 
     print("pass get infor")
 
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -239,10 +236,10 @@ def search_user_group(event, table):
 def lambda_handler(event, context):
     logger.info(event)
 
-    name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
+    name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
 
-    region = os.environ.get("REGION", "ap-northest-1")
+    region = os.environ.get("REGION")
     authorizer_lambda = event["requestContext"]["authorizer"]["lambda"]
 
     system_id = authorizer_lambda["system_id"]
