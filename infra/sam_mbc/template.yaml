@@ -352,7 +352,7 @@ Resources:
           - keycloak
 
   # Policy allows SNS to publish to this SQS queue
-  SnsToSqsPolicy:
+  SNSToSQSPolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       PolicyDocument:
