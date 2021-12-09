@@ -312,7 +312,7 @@ Resources:
             TopicName: !GetAtt SNSTopic.TopicName
       Environment:
         Variables:
-          TopicName: !GetAtt SNSTopic.TopicName
+          TOPIC_NAME: !GetAtt SNSTopic.TopicName
       Tags:
         Name: !Ref SystemName
         Env: !Ref Env
