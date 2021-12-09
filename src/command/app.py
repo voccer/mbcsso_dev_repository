@@ -47,9 +47,9 @@ def create_user(event, table):
                 ),
             }
 
-        current_version = user_item.get("version")
-        user_item["sk"] = f"config#{current_version}"
-        table.put_item(Item=user_item)
+        # current_version = user_item.get("version")
+        # user_item["sk"] = f"config#{current_version}"
+        # table.put_item(Item=user_item)
 
     params = {
         "id": "user#" + user_id,
@@ -88,7 +88,7 @@ def create_user(event, table):
         params["password"] = base64.b64encode(cipher_text["CiphertextBlob"]).decode(
             "utf-8"
         )
-        
+
     if "first_name" in body:
         params["first_name"] = body["first_name"]
     if "last_name" in body:
@@ -326,9 +326,10 @@ def create_group(event, table):
                     {"code": "E_INVALID", "message": "group name already exist"}
                 ),
             }
-        current_version = group_item.get("version")
-        group_item["sk"] = f"config#{current_version}"
-        table.put_item(Item=group_item)
+
+        # current_version = group_item.get("version")
+        # group_item["sk"] = f"config#{current_version}"
+        # table.put_item(Item=group_item)
 
     params = {
         "id": "group#" + body["groupname"],
