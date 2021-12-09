@@ -336,14 +336,20 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub ${SystemName}_${Env}_topic
-      Subscription:
-        - Protocol: sqs
-          Endpoint: !GetAtt SQSQueue.Arn
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
         - Key: env
           Value: !Ref Env
+  SQSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SNSTopic
+      Endpoint: !GetAtt SQSQueue.Arn
+      Protocol: sqs
+      FilterPolicy:
+        sso-type:
+          - keycloak
 
   # Policy allows SNS to publish to this SQS queue
   SnsToSqsPolicy:
