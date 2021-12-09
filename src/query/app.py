@@ -242,8 +242,10 @@ def lambda_handler(event, context):
     region = os.environ.get("REGION")
     authorizer_lambda = event["requestContext"]["authorizer"]["lambda"]
 
-    system_id = authorizer_lambda["system_id"]
-    tenant_id = authorizer_lambda["tenant_id"]
+    system_id, tenant_id = (
+        authorizer_lambda["system_id"],
+        authorizer_lambda["tenant_id"],
+    )
 
     user_query_table_name = f"{name}_{env}_{system_id}_{tenant_id}_users"
 
