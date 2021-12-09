@@ -49,6 +49,8 @@ def lambda_handler(event, context):
         MessageStructure="json",
     )
 
+    print(f"Publish to {topic_name} with response:: {response}")
+    
     return {
         "statusCode": 200,
         "body": json.dumps(
