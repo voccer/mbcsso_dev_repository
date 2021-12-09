@@ -46,7 +46,7 @@ def lambda_handler(event, context):
         Message=json.dumps({"default": json.dumps(infos)}),
         MessageStructure="json",
         MessageAttributes={
-            "sso_type": {"DateType": "String", "StringValue": "keycloak"}
+            "sso_type": {"DataType": "String", "StringValue": "keycloak"}
         },
     )
 
