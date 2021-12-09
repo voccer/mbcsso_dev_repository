@@ -643,10 +643,12 @@ def delete_group_member(event, table):
 
 @xray_recorder.capture("CUD user/group")
 def lambda_handler(event, context):
-    logger.info(event)
+    logger.info(f"event:: {event}")
+
     name = os.environ.get("SYSTEM_NAME")
     env = os.environ.get("ENV")
     region = os.environ.get("REGION")
+
     authorizer_lambda = event["requestContext"]["authorizer"]["lambda"]
     system_id = authorizer_lambda["system_id"]
     tenant_id = authorizer_lambda["tenant_id"]
