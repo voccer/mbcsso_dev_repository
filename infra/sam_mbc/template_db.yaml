@@ -27,35 +27,6 @@ Parameters:
     Default: 5
 
 Resources:
-  # ProcessStreamDDBFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     PackageType: Image
-  #     FunctionName: !Sub ${Name}_${Env}_ProcessStreamDDBFunction
-  #     Policies:
-  #       - DynamoDBStreamReadPolicy:
-  #           TableName: !Sub ${Name}_${Env}_*_*_user_commands
-  #           StreamName: '*' # arn of stream
-  #       - DynamoDBCrudPolicy:
-  #           TableName: !Sub ${Name}_${Env}_*_*_users
-  #       - DynamoDBReadPolicy:
-  #           TableName: !Sub ${Name}_${Env}_Config
-  #     Events:
-  #       Stream:
-  #         Type: DynamoDB
-  #         Properties:
-  #           Stream: '*'
-  #           BatchSize: !Ref BatchSizeStreaming
-  #           StartingPosition: TRIM_HORIZON
-
-  #     Tags:
-  #       Name: !Ref Name
-  #       Env: !Ref Env
-  #   Metadata:
-  #     Dockerfile: Dockerfile
-  #     DockerContext: ./src/process_stream
-  #     DockerTag: python3.9-v1
-
   WriteUserTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -114,6 +85,189 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub ${Name}_${Env}_1_1_users #{PREFIX}_{SystemId}_{TenantId}_write_User
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: member_id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: first_name
+          AttributeType: S
+        - AttributeName: last_name
+          AttributeType: S
+        - AttributeName: config_updated_at
+          AttributeType: N
+
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+      # GSI
+      GlobalSecondaryIndexes:
+        - IndexName: UserGroupGSI
+          KeySchema:
+            - AttributeName: member_id
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - sk
+              - update_at
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+
+        - IndexName: UserEmailGSI
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - id
+              - first_name
+              - last_name
+              - is_active
+              - version
+              - config_updated_at
+              - attributes
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+
+        - IndexName: UserUpdatedAtGSI
+          KeySchema:
+            - AttributeName: id
+              KeyType: HASH
+            - AttributeName: config_updated_at
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - sk
+              - email
+              - first_name
+              - last_name
+              - is_active
+              - version
+              - attributes
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+
+        - IndexName: UserLastNameGSI
+          KeySchema:
+            - AttributeName: last_name
+              KeyType: HASH
+            - AttributeName: config_updated_at
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - id
+              - sk
+              - email
+              - first_name
+              - is_active
+              - version
+              - attributes
+
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+
+        - IndexName: UserFirstNameGSI
+          KeySchema:
+            - AttributeName: first_name
+              KeyType: HASH
+            - AttributeName: config_updated_at
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - id
+              - sk
+              - email
+              - last_name
+              - is_active
+              - version
+              - attributes
+
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+  WriteUser2Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Name}_${Env}_2_2_user_commands #{PREFIX}_{SystemId}_{TenantId}_write_User
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+        # GSI
+      GlobalSecondaryIndexes:
+        - IndexName: UserEmailGSI
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - id
+              - first_name
+              - last_name
+              - is_active
+              - version
+              - updated_at
+              - attributes
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+        - IndexName: UserGroupGSI
+          KeySchema:
+            - AttributeName: sk
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+
+  # for query
+  ReadUser2Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Name}_${Env}_2_2_users #{PREFIX}_{SystemId}_{TenantId}_write_User
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
