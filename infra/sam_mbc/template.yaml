@@ -650,7 +650,7 @@ Resources:
               - ecr:*
             Effect: Allow
             Resource:
-              - !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/*'
+              - '*'
 
   BuildProjectRole:
     Type: AWS::IAM::Role
