@@ -43,14 +43,13 @@ def lambda_handler(event, context):
 
     response = client.publish(
         TargetArn=f"arn:aws:sns:{region}:{account_id}:{topic_name}",
-        Message=json.dumps(
-            {"default": json.dumps({"sso_type": "keycloak", "infos": infos})}
-        ),
+        Message=json.dumps({"default": json.dumps(infos)}),
         MessageStructure="json",
+        MessageAttributes={"sso_type": {"Type": "String", "Value": "keycloak"}},
     )
 
     print(f"Publish to {topic_name} with response:: {response}")
-    
+
     return {
         "statusCode": 200,
         "body": json.dumps(

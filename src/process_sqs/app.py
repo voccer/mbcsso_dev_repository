@@ -384,11 +384,7 @@ def lambda_handler(event, context):
         body = json.loads(record["body"])
 
         message = json.loads(body["Message"])
-        sso_type = message.get("sso_type")
-        # if sso_type != "keycloak":
-        #     continue
-
-        for mess in message["infos"]:
+        for mess in message:
             system_id, tenant_id = mess["system_id"], mess["tenant_id"]
             users_table_name = f"{system_name}_{env}_{system_id}_{tenant_id}_users"
 
