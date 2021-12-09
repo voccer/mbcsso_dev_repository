@@ -2,7 +2,7 @@ import os
 import json
 import time
 import logging
-
+import base64
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from aws_xray_sdk.core import xray_recorder
@@ -85,8 +85,10 @@ def create_user(event, table):
             KeyId=os.environ.get("KMS_KEY_ID"),
             Plaintext=bytes(body["password"], encoding="utf-8"),
         )
-        params["password"] = cipher_text["CiphertextBlob"].decode("utf-8")
-
+        params["password"] = base64.b64encode(cipher_text["CiphertextBlob"]).decode(
+            "utf-8"
+        )
+        
     if "first_name" in body:
         params["first_name"] = body["first_name"]
     if "last_name" in body:
@@ -183,8 +185,9 @@ def update_user(event, table):
             KeyId=os.environ.get("KMS_KEY_ID"),
             Plaintext=bytes(body["password"], encoding="utf-8"),
         )
-        params["password"] = cipher_text["CiphertextBlob"].decode("utf-8")
-
+        params["password"] = base64.b64encode(cipher_text["CiphertextBlob"]).decode(
+            "utf-8"
+        )
     else:
         params["password"] = None
     params["first_name"] = body.get("first_name", None)

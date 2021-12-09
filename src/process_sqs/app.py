@@ -29,12 +29,13 @@ def setup_password(user_id, password, admin, token):
     ## decrypt password by kms
     kms_client = boto3.client("kms")
     kms_key_id = os.environ.get("KMS_KEY_ID")
-    password = kms_client.decrypt(
+    decrypted_password = kms_client.decrypt(
         KeyId=kms_key_id, CiphertextBlob=bytes(base64.b64decode(password))
     )
-    print(f"set up decrypted password::{password}")
+    decrypted_password = decrypted_password["Plaintext"].decode("utf-8")
+    print(f"set up decrypted password::{decrypted_password}")
 
-    payload = {"type": "password", "value": password, "temporary": False}
+    payload = {"type": "password", "value": decrypted_password, "temporary": False}
     response = requests.request(
         "PUT", url=url, headers=headers, json=payload, verify=False, timeout=timeout
     )
