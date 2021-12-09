@@ -81,10 +81,11 @@ def create_user(event, table):
 
     if "password" in body:
         kms_client = boto3.client("kms")
-        params["password"] = kms_client.encrypt(
+        cipher_text = kms_client.encrypt(
             KeyId=os.environ.get("KMS_KEY_ID"),
-            Plaintext=encrypt(body["password"]),
-        )["CiphertextBlob"].decode("utf-8")
+            Plaintext=bytes(body["password"], encoding="utf-8"),
+        )
+        params["password"] = cipher_text["CiphertextBlob"].decode("utf-8")
 
     if "first_name" in body:
         params["first_name"] = body["first_name"]
@@ -178,10 +179,12 @@ def update_user(event, table):
 
     if "password" in body:
         kms_client = boto3.client("kms")
-        params["password"] = kms_client.encrypt(
+        cipher_text = kms_client.encrypt(
             KeyId=os.environ.get("KMS_KEY_ID"),
-            Plaintext=encrypt(body["password"]),
-        )["CiphertextBlob"].decode("utf-8")
+            Plaintext=bytes(body["password"], encoding="utf-8"),
+        )
+        params["password"] = cipher_text["CiphertextBlob"].decode("utf-8")
+
     else:
         params["password"] = None
     params["first_name"] = body.get("first_name", None)

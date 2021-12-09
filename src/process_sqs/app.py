@@ -101,21 +101,21 @@ def get_token(admin):
     password = admin["password"]
 
     #  get plaintext password from kms
-    kms_client = boto3.client("kms")
     system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
     env = os.environ.get("ENV", "dev")
-
     alias = f"alias/{system_name}_{env}_key_{username}"
-    password = kms_client.decrypt(
+
+    kms_client = boto3.client("kms")
+    decrypted_password = kms_client.decrypt(
         KeyId=alias, CiphertextBlob=bytes(base64.b64decode(password))
     )
-    password = password["Plaintext"].decode("utf-8")
-    print(f"plaintext password: {password}")
+    decrypted_password = decrypted_password["Plaintext"].decode("utf-8")
+    print(f"plaintext password: {decrypted_password}")
 
     params = {
         "client_id": client_id,
         "username": username,
-        "password": password,
+        "password": decrypted_password,
         "grant_type": "password",
     }
 
