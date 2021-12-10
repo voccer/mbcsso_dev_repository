@@ -1,5 +1,8 @@
 # MBC
 
+[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
+[![jp](https://img.shields.io/badge/lang-jp-yellow.svg)](README_ja.md)
+
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
 - docs - Documents for application

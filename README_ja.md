@@ -1,4 +1,8 @@
 # MBC
+
+[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
+[![jp](https://img.shields.io/badge/lang-jp-yellow.svg)](README_ja.md)
+
 ソースファイルの構成は以下の通り。
 
 - docsファイル - ドキュメントファイル
