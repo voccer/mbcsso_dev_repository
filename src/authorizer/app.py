@@ -23,6 +23,7 @@ admin_roles = [
     "view-users",
 ]
 
+
 @xray_recorder.capture("check allow to access")
 def check_allow_to_access(roles, action, preferred_username):
     roles_set = set(roles)
@@ -109,24 +110,25 @@ def check_authorization(
 
     return True
 
+
 @xray_recorder.capture("authorizer")
 def lambda_handler(event, context):
     print(f"authorizer event: {event}")
-    name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
+    name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
     region = os.environ.get("REGION", "ap-northeast-1")
     config_table_name = "{}_{}_Config".format(name, env)
-    access_token = event["headers"].get("authorization", "")
+    access_token = event["headers"].get("authorization")
 
     system_id, tenant_id = event.get("queryStringParameters", {}).get(
-        "system_id", ""
-    ), event.get("queryStringParameters", {}).get("tenant_id", "")
+        "system_id"
+    ), event.get("queryStringParameters", {}).get("tenant_id")
 
     route_key = event["requestContext"]["routeKey"]
 
     method, path = route_key.split(" ")
 
-    user_id = event.get("pathParameters", {}).get("user_id", "")
+    user_id = event.get("pathParameters", {}).get("user_id")
 
     action = ""
     if method == "POST" and path == "/users":

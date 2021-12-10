@@ -1,4 +1,3 @@
-boto3
 requests
 PyJWT==1.7.1
 aws_xray_sdk

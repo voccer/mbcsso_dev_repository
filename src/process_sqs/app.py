@@ -8,19 +8,12 @@ import base64
 
 from aws_xray_sdk.core import xray_recorder
 
-
-@xray_recorder.capture("decrypt password")
-def decrypt(password):
-    res = ""
-    for i in password:
-        res += chr(ord(i) - 1)
-    return res
+timeout = 10
 
 
 @xray_recorder.capture("put password")
-def set_up_password(user_id, password, admin, token):
-    print(
-        f"start set up password with user_id: {user_id}, password: {password}")
+def setup_password(user_id, password, admin, token):
+    print(f"start setup password with user_id: {user_id}, password: {password}")
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
 
@@ -30,15 +23,21 @@ def set_up_password(user_id, password, admin, token):
     print(f"setup password token: {token}")
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + str(token),
+        "Authorization": f"Bearer {token}",
     }
-    password = decrypt(password)
 
-    print(f"set up decrypted password::{password}")
-    payload = {"type": "password", "value": password, "temporary": False}
+    ## decrypt password by kms
+    kms_client = boto3.client("kms")
+    kms_key_id = os.environ.get("KMS_KEY_ID")
+    decrypted_password = kms_client.decrypt(
+        KeyId=kms_key_id, CiphertextBlob=bytes(base64.b64decode(password))
+    )
+    decrypted_password = decrypted_password["Plaintext"].decode("utf-8")
+    print(f"set up decrypted password::{decrypted_password}")
 
+    payload = {"type": "password", "value": decrypted_password, "temporary": False}
     response = requests.request(
-        "PUT", url=url, headers=headers, json=payload, verify=False
+        "PUT", url=url, headers=headers, json=payload, verify=False, timeout=timeout
     )
 
     print(f"set up password::{response.status_code}")
@@ -46,42 +45,49 @@ def set_up_password(user_id, password, admin, token):
 
 @xray_recorder.capture("get user_id keycloak")
 def get_user_id(username, admin, token):
+    print(f"start get user_id with username: {username}")
+
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
-    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/?username=" + str(
-        username
-    )
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users?username={username}"
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + str(token),
+        "Authorization": f"Bearer {token}",
     }
 
-    response = requests.get(url=url, headers=headers).json()
+    response = requests.request("GET", url=url, headers=headers, timeout=timeout).json()
     if len(response) == 0:
         return None
 
-    return response[0]["id"]
+    for resp in response:
+        if str(resp["username"]).strip() == str(username).strip():
+            return resp["id"]
+    return None
 
 
 @xray_recorder.capture("get group_id keycloak")
 def get_group_id(group_name, admin, token):
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
-    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}dev/groups?search=" + str(
-        group_name
+    url = (
+        f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/groups?search={group_name}"
     )
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + str(token),
+        "Authorization": f"Bearer {token}",
     }
 
-    response = requests.get(url=url, headers=headers).json()
+    response = requests.request("GET", url=url, headers=headers, timeout=timeout).json()
+    print(f"get group_id with::{response}")
     if len(response) == 0:
         return None
 
-    return response[0]["id"]
+    for resp in response:
+        if str(resp["name"]).strip() == str(group_name).strip():
+            return resp["id"]
+    return None
 
 
 @xray_recorder.capture("get token admin account")
@@ -96,21 +102,21 @@ def get_token(admin):
     password = admin["password"]
 
     #  get plaintext password from kms
-    kms_client = boto3.client("kms")
-    system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
-
+    system_name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
     alias = f"alias/{system_name}_{env}_key_{username}"
-    password = kms_client.decrypt(
+
+    kms_client = boto3.client("kms")
+    decrypted_password = kms_client.decrypt(
         KeyId=alias, CiphertextBlob=bytes(base64.b64decode(password))
     )
-    password = password["Plaintext"].decode("utf-8")
-    print(f"plaintext password: {password}")
+    decrypted_password = decrypted_password["Plaintext"].decode("utf-8")
+    print(f"plaintext password: {decrypted_password}")
 
     params = {
         "client_id": client_id,
         "username": username,
-        "password": password,
+        "password": decrypted_password,
         "grant_type": "password",
     }
 
@@ -121,12 +127,12 @@ def get_token(admin):
 
 @xray_recorder.capture("sync:: create user")
 def create_user(data, admin):
-    print("sync:: create user")
+    print(f"sync:: create user with data: {data}")
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users"
-    username = data["id"]["S"].strip().split("#")[-1]
+    username = data["id"]["S"].split("#")[-1]
     payload = {
         "enabled": True,
         "groups": [],
@@ -137,21 +143,21 @@ def create_user(data, admin):
     token = get_token(admin)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + str(token),
+        "Authorization": f"Bearer {token}",
     }
-    print(f"sync create user payload:: {data}")
+
     if "first_name" in data:
         payload["firstName"] = data["first_name"]["S"]
     if "last_name" in data:
         payload["lastName"] = data["last_name"]["S"]
     if "attributes" in data:
-        payload["attributes"] = data["attributes"]["M"]
-    else:
         payload["attributes"] = {}
-    print(f"sync create user payload:: {payload}")
+        for att in data["attributes"]["M"]:
+            payload["attributes"][att] = [data["attributes"]["M"][att]["S"]]
 
-    code = requests.post(
-        url=url, headers=headers, json=payload, verify=False
+    print(f"sync create user payload:: {payload}")
+    code = requests.request(
+        "POST", url=url, headers=headers, json=payload, verify=False
     ).status_code
 
     print("sync:: create user with code: ", code)
@@ -163,15 +169,13 @@ def create_user(data, admin):
                 print("warning: user not found when set password")
 
                 return
-            set_up_password(user_id, password, admin, token)
+            setup_password(user_id, password, admin, token)
 
 
 @xray_recorder.capture("sync:: delete user")
 def delete_user(data, admin):
     username = data["id"]["S"]
-    print(f"delete user with pre-username: {username}")
     username = str(username).strip().split("#")[-1]
-    print(f"delete user with after-username: {username}")
 
     token = get_token(admin)
 
@@ -182,17 +186,14 @@ def delete_user(data, admin):
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + str(token),
+        "Authorization": f"Bearer {token}",
     }
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
 
-    url = (
-        f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/"
-        + str(user_id).strip()
-    )
+    url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}"
 
-    requests.delete(url=url, headers=headers)
+    requests.request("DELETE", url=url, headers=headers)
 
 
 @xray_recorder.capture("sync:: update user")
@@ -212,7 +213,7 @@ def update_user(data, admin):
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + str(token),
+        "Authorization": f"Bearer {token}",
     }
     payload = {"username": username}
 
@@ -225,7 +226,7 @@ def update_user(data, admin):
 
     if "password" in data:
         password = data["password"]["S"]
-        set_up_password(user_id, password, admin, token)
+        setup_password(user_id, password, admin, token)
 
     return requests.request(
         "PUT", url=url, headers=headers, json=payload, verify=False
@@ -241,7 +242,7 @@ def create_group(data, admin):
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + str(token),
+        "Authorization": f"Bearer {token}",
     }
     payload = {"name": data["id"]["S"].strip().split("#")[-1]}
 
@@ -267,7 +268,7 @@ def delete_group(data, admin):
     print(group_name, group_id)
 
     headers = {
-        "authorization": "Bearer " + str(token),
+        "authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "cache-control": "no-cache",
     }
@@ -291,7 +292,6 @@ def create_member_group(data, admin):
 
     user_id = get_user_id(user_name, admin, token)
     group_id = get_group_id(group_name, admin, token)
-    print(f"funct member: {user_id} group: {group_id}")
 
     keycloak_url = admin["keycloak_url"]
     keycloak_realm = admin["keycloak_realm"]
@@ -304,17 +304,14 @@ def create_member_group(data, admin):
         return
 
     headers = {
-        "authorization": "Bearer " + str(token),
+        "authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "cache-control": "no-cache",
     }
-    # payload = {
-    #     "realms": "dev",
-    #     "userID": user_id,
-    #     "groupID": group_id
-    # }
+    payload = {"realms": keycloak_realm, "userID": user_id, "groupID": group_id}
+    print(f"url:: {url}, payload:: {payload}")
 
-    return requests.request("PUT", url=url, headers=headers).status_code
+    return requests.request("PUT", url=url, headers=headers, json=payload).status_code
 
 
 @xray_recorder.capture("sync:: delete member group")
@@ -331,6 +328,7 @@ def delete_member_group(data, admin):
     keycloak_realm = admin["keycloak_realm"]
 
     url = f"{keycloak_url}/auth/admin/realms/{keycloak_realm}/users/{user_id}/groups/{group_id}"
+    print(f"sync:: delete member group url:: {url}")
 
     if not user_id or not group_id:
         print("user or group not found")
@@ -338,7 +336,7 @@ def delete_member_group(data, admin):
         return
 
     headers = {
-        "authorization": "Bearer " + str(token),
+        "authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "cache-control": "no-cache",
     }
@@ -352,32 +350,14 @@ def delete_member_group(data, admin):
 def create_data(table_name, data):
     print(f"create_data: {table_name}")
     print(f"create_data: {data}")
-    # ignore if data is config#version
-    sk = data["sk"]["S"]
-    if "config#" in sk:
-        return
 
-    if "password" in data:
-        del data["password"]
+    data_without_password = data.copy()
+
+    if "password" in data_without_password:
+        del data_without_password["password"]
 
     client = boto3.client("dynamodb")
-    client.put_item(TableName=table_name, Item=data)
-    print("complete")
-
-
-# def update_data(table_name, data):
-#     # ignore if data is config#version
-#     sk = data["sk"]
-#     if "config#" in sk:
-#         return
-
-#     print(f"update_data: {table_name}")
-#     print(f"update_data: {data}")
-#     if "password" in data:
-#         del data["password"]
-
-#     client = boto3.client("dynamodb")
-#     client.put_item(TableName=table_name, Item=data)
+    client.put_item(TableName=table_name, Item=data_without_password)
 
 
 @xray_recorder.capture("push db:: delete data")
@@ -391,86 +371,146 @@ def delete_data(table_name, data):
 @xray_recorder.capture("sync and put data to db")
 def lambda_handler(event, context):
     print(f"process sqs event: {event}")
-    system_name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
+    system_name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
+    region = os.environ.get("REGION")
+
+    config_table_name = f"{system_name}_{env}_Config"
+    config_table = boto3.resource("dynamodb", region_name=region).Table(
+        config_table_name
+    )
 
     for record in event["Records"]:
         body = json.loads(record["body"])
 
         message = json.loads(body["Message"])
-        sso_type = message.get("sso_type", "")
-        if sso_type != "keycloak":
-            continue
-
-        for mess in message["infos"]:
+        for mess in message:
             system_id, tenant_id = mess["system_id"], mess["tenant_id"]
-            event_name = mess["event_name"]
+            users_table_name = f"{system_name}_{env}_{system_id}_{tenant_id}_users"
+
             data = mess["data"]
-
-            table_name = f"{system_name}_{env}_{system_id}_{tenant_id}_users"
-            if event_name == "INSERT":
-                create_data(table_name, data)
-            elif event_name == "MODIFY":
-                # update to db same to create data
-                create_data(table_name, data)
-            elif event_name == "REMOVE":
-                delete_data(table_name, data)
-
-    # TODO: sync data to keycloak
-    print("sync data to keycloak")
-    for record in event["Records"]:
-        body = json.loads(record["body"])
-
-        message = json.loads(body["Message"])
-        sso_type = message.get("sso_type", "")
-        if sso_type != "keycloak":
-            continue
-
-        for mess in message["infos"]:
-            system_id, tenant_id = mess["system_id"], mess["tenant_id"]
             event_name = mess["event_name"]
-            data = mess["data"]
-            region = os.environ.get("REGION", "ap-northeast-1")
-            table_name = f"{system_name}_{env}_Config"
 
-            table = boto3.resource(
-                "dynamodb", region_name=region).Table(table_name)
-            resp = table.get_item(
-                Key={"system_id": system_id, "tenant_id": tenant_id})
+            sk = data["sk"]["S"]
+            pk = data["id"]["S"].split("#")[0]
 
-            admin = resp.get("Item")
-
-            print(f"admin: {admin}")
-
-            sk = str(data["sk"]["S"]).strip()
-            pk = str(data["id"]["S"]).strip().split("#")[0]
             if sk.startswith("config#"):
                 continue
-            print(f"sk: {sk}\pk: {pk}")
-            if event_name == "INSERT":
-                if sk == "config":
-                    if pk == "user":
-                        create_user(data, admin)
-                    else:
-                        create_group(data, admin)
-                if sk.startswith("member"):
-                    print(f"function:: create member group insert")
-                    create_member_group(data, admin)
-            elif event_name == "MODIFY":
-                if sk == "config":
-                    if pk == "user":
+
+            admin_item = config_table.get_item(
+                Key={"system_id": system_id, "tenant_id": tenant_id}
+            )
+
+            admin = admin_item.get("Item")
+            print(f"admin: {admin}")
+
+            command = data.get("command", {}).get("S")
+
+            print(f"command: {command}")
+            if event_name == "INSERT" or event_name == "MODIFY":
+                # save to db
+                create_data(users_table_name, data)
+
+                # sync to keycloak
+                if command == "add":
+                    if sk == "config":
+                        if pk == "user":
+                            create_user(data, admin)
+                        else:
+                            create_group(data, admin)
+                elif command == "update":
+                    if sk == "config" and pk == "user":
                         update_user(data, admin)
-                if sk.startswith("member"):
-                    print(f"function:: create member group modify")
-                    create_member_group(data, admin)
-            elif event_name == "REMOVE":
-                if sk == "config":
-                    if pk == "user":
-                        delete_user(data, admin)
-                    else:
-                        delete_group(data, admin)
-                if sk.startswith("member"):
-                    delete_member_group(data, admin)
+                elif command == "delete":
+                    if sk == "config":
+                        if pk == "user":
+                            delete_user(data, admin)
+                        else:
+                            delete_group(data, admin)
+                elif sk.startswith("member#"):
+                    print(f"sync create member_group")
+                    resp = create_member_group(data, admin)
+                    print(f"create member:: {resp}")
+
+            elif event_name == "REMOVE" and sk.startswith("member#"):
+                print(f"delete member group")
+                delete_data(users_table_name, data)
+                print(f"sync:: delete member_group")
+                delete_member_group(data, admin)
+            else:
+                print("event exception")
+            # sysn to keycloak
+
+            # if command == "add":
+            #     if sk == "config":
+            #         if pk == "user":
+            #             create_user(data, admin)
+            #         else:
+            #             create_group(data, admin)
+            #     elif sk == "member":
+            #         create_member_group(data, admin)
+            # elif command == "update":
+            #     if sk == "config":
+            #         if pk == "user":
+            #             update_user(data, admin)
+
+            # elif command == "delete":
+            #     if sk == "config":
+            #         if pk == "user":
+            #             delete_user(data, admin)
+            #         else:
+            #             delete_group(data, admin)
+            #     elif sk == "member":
+            #         delete_member_group(data, admin)
+
+    # TODO: sync data to keycloak
+    # print("sync data to keycloak")
+    # for record in event["Records"]:
+    #     body = json.loads(record["body"])
+
+    #     message = json.loads(body["Message"])
+    #     sso_type = message.get("sso_type", "")
+    #     if sso_type != "keycloak":
+    #         continue
+
+    #     for mess in message["infos"]:
+    #         system_id, tenant_id = mess["system_id"], mess["tenant_id"]
+    #         data = mess["data"]
+    #         region = os.environ.get("REGION", "ap-northeast-1")
+    #         table_name = f"{system_name}_{env}_Config"
+
+    #         table = boto3.resource("dynamodb", region_name=region).Table(table_name)
+    #         resp = table.get_item(Key={"system_id": system_id, "tenant_id": tenant_id})
+
+    #         admin = resp.get("Item")
+
+    #         print(f"admin: {admin}")
+
+    #         sk = str(data["sk"]["S"]).strip()
+    #         pk = str(data["id"]["S"]).strip().split("#")[0]
+    #         if sk.startswith("config#"):
+    #             continue
+
+    #         if event_name == "INSERT":
+    #             if sk == "config":
+    #                 if pk == "user":
+    #                     create_user(data, admin)
+    #                 else:
+    #                     create_group(data, admin)
+    #             if sk == "member":
+    #                 create_member_group(data, admin)
+    #         elif event_name == "MODIFY":
+    #             if sk == "config":
+    #                 if pk == "user":
+    #                     update_user(data, admin)
+    #         elif event_name == "REMOVE":
+    #             if sk == "config":
+    #                 if pk == "user":
+    #                     delete_user(data, admin)
+    #                 else:
+    #                     delete_group(data, admin)
+    #             if sk == "member":
+    #                 delete_member_group(data, admin)
 
     # TODO: push to eventbridge
 

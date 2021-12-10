@@ -1,6 +1,5 @@
 import os
 import json
-import time
 import logging
 
 import boto3
@@ -22,6 +21,7 @@ def get_user(event, table):
         }
 
     user_id = raw_path.split("/")[-1]
+    user_id = str(user_id).lower()
 
     resp = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
 
@@ -57,6 +57,7 @@ def search_user(event, table):
 
     if "username" in query_params:
         user_id = query_params["username"]
+        user_id = str(user_id).lower()
         print(f"username:: {user_id}")
         resp = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
         if resp.get("Item", None) is not None:
@@ -66,8 +67,7 @@ def search_user(event, table):
         print(f"email:: {email}")
         resp = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(
-                email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
         )
         if resp.get("Items", None) is not None:
             items = resp["Items"]
@@ -106,8 +106,7 @@ def search_user(event, table):
         print(f"first_name_contains:: {first_name_contains}")
         resp = table.scan(
             IndexName="UserFirstNameGSI",
-            FilterExpression=Attr("first_name").begins_with(
-                first_name_contains),
+            FilterExpression=Attr("first_name").begins_with(first_name_contains),
         )
         items = resp["Items"]
     else:
@@ -149,11 +148,11 @@ def get_group(event, table):
         }
 
     group_id = path_params["group_id"]
+    group_id = str(group_id).lower()
 
     print("pass get infor")
 
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -192,6 +191,7 @@ def search_user_group(event, table):
         }
 
     user_id = path_params["user_id"]
+    user_id = str(user_id).lower()
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
     if check_user.get("Item", None) is None:
@@ -236,14 +236,16 @@ def search_user_group(event, table):
 def lambda_handler(event, context):
     logger.info(event)
 
-    name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
+    name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
 
-    region = os.environ.get("REGION", "ap-northest-1")
+    region = os.environ.get("REGION")
     authorizer_lambda = event["requestContext"]["authorizer"]["lambda"]
 
-    system_id = authorizer_lambda["system_id"]
-    tenant_id = authorizer_lambda["tenant_id"]
+    system_id, tenant_id = (
+        authorizer_lambda["system_id"],
+        authorizer_lambda["tenant_id"],
+    )
 
     user_query_table_name = f"{name}_{env}_{system_id}_{tenant_id}_users"
 

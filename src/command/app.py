@@ -2,7 +2,7 @@ import os
 import json
 import time
 import logging
-
+import base64
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from aws_xray_sdk.core import xray_recorder
@@ -32,11 +32,14 @@ def create_user(event, table):
         }
 
     user_id = body["username"]
-    check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
+    user_id = str(user_id).lower()
 
-    if check_user.get("Item", None):
-        is_active = check_user["Item"].get("is_active", "")
-        if str(is_active).strip() == "1":
+    get_item_ret = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
+    user_item = get_item_ret.get("Item")
+
+    if user_item:
+        is_active = user_item.get("is_active")
+        if is_active:
             return {
                 "statusCode": 400,
                 "body": json.dumps(
@@ -44,8 +47,12 @@ def create_user(event, table):
                 ),
             }
 
+        # current_version = user_item.get("version")
+        # user_item["sk"] = f"config#{current_version}"
+        # table.put_item(Item=user_item)
+
     params = {
-        "id": "user#" + body["username"],
+        "id": "user#" + user_id,
         "sk": "config",
         "command": "add",
         "sso_type": "keycloak",  # default sso type to keycloak
@@ -73,12 +80,20 @@ def create_user(event, table):
                 }
 
     if "password" in body:
-        params["password"] = encrypt(
-            body["password"])  # ToDo: encrypt password
+        kms_client = boto3.client("kms")
+        cipher_text = kms_client.encrypt(
+            KeyId=os.environ.get("KMS_KEY_ID"),
+            Plaintext=bytes(body["password"], encoding="utf-8"),
+        )
+        params["password"] = base64.b64encode(cipher_text["CiphertextBlob"]).decode(
+            "utf-8"
+        )
+
     if "first_name" in body:
         params["first_name"] = body["first_name"]
     if "last_name" in body:
         params["last_name"] = body["last_name"]
+
     if "attributes" in body:
         params["attributes"] = body["attributes"]
 
@@ -103,7 +118,9 @@ def update_user(event, table):
     if "username" in body:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "can not edit username"}),
+            "body": json.dumps(
+                {"code": "E_INVALID", "message": "can not edit username"}
+            ),
         }
 
     raw_path = event.get("rawPath", None)
@@ -114,6 +131,7 @@ def update_user(event, table):
         }
 
     user_id = raw_path.split("/")[-1]
+    user_id = str(user_id).lower()
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
 
     if check_user.get("Item", None):
@@ -147,8 +165,7 @@ def update_user(event, table):
         email = params["email"]
         check_email = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(
-                email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
         )
         if check_email.get("Count") > 0:
             is_active = check_email["Items"][0].get("is_active", "")
@@ -163,7 +180,14 @@ def update_user(event, table):
         params["email"] = None
 
     if "password" in body:
-        params["password"] = encrypt(body["password"])
+        kms_client = boto3.client("kms")
+        cipher_text = kms_client.encrypt(
+            KeyId=os.environ.get("KMS_KEY_ID"),
+            Plaintext=bytes(body["password"], encoding="utf-8"),
+        )
+        params["password"] = base64.b64encode(cipher_text["CiphertextBlob"]).decode(
+            "utf-8"
+        )
     else:
         params["password"] = None
     params["first_name"] = body.get("first_name", None)
@@ -223,6 +247,8 @@ def delete_user(event, table):
 
     user_id = raw_path.split("/")[-1]
 
+    user_id = str(user_id).lower()
+
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
     if check_user.get("Item", None) is None:
         return {
@@ -230,11 +256,13 @@ def delete_user(event, table):
             "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
         }
     else:
-        is_active = check_user.get("Item").get("is_active", "")
-        if str(is_active).strip() != "1":
+        is_active = check_user.get("Item").get("is_active")
+        if not is_active:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"code": "E_INVALID", "message": "user is not active"}),
+                "body": json.dumps(
+                    {"code": "E_INVALID", "message": "user is not active"}
+                ),
             }
 
     user = check_user.get("Item")
@@ -283,18 +311,25 @@ def create_group(event, table):
         }
 
     group_id = body["groupname"]
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
 
-    if check_group.get("Item", None):
-        is_active = check_group.get("is_active", "")
-        if str(is_active).strip() == "1":
+    group_id = str(group_id).lower()
+
+    get_item_ret = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+
+    group_item = get_item_ret.get("Item")
+    if group_item:
+        is_active = group_item.get("is_active")
+        if is_active:
             return {
                 "statusCode": 400,
                 "body": json.dumps(
                     {"code": "E_INVALID", "message": "group name already exist"}
                 ),
             }
+
+        # current_version = group_item.get("version")
+        # group_item["sk"] = f"config#{current_version}"
+        # table.put_item(Item=group_item)
 
     params = {
         "id": "group#" + body["groupname"],
@@ -348,8 +383,9 @@ def update_group(event, table):
         }
 
     group_id = raw_path.split("/")[-1]
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
+    group_id = str(group_id).lower()
+
+    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -407,9 +443,9 @@ def delete_group(event, table):
         }
 
     group_id = raw_path.split("/")[-1]
+    group_id = str(group_id).lower()
 
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
     if check_group.get("Item", None) is None:
         return {
             "statusCode": 400,
@@ -477,11 +513,13 @@ def add_group_member(event, table):
     user_id = path_params["user_id"]
     group_id = path_params["group_id"]
 
+    group_id = str(group_id).lower()
+    user_id = str(user_id).lower()
+
     print("pass get infor")
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -551,11 +589,13 @@ def delete_group_member(event, table):
     user_id = path_params["user_id"]
     group_id = path_params["group_id"]
 
+    group_id = str(group_id).lower()
+    user_id = str(user_id).lower()
+
     print("pass get infor")
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
-    check_group = table.get_item(
-        Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
@@ -594,8 +634,7 @@ def delete_group_member(event, table):
             "body": json.dumps({"code": "E_INVALID", "message": "user not in group"}),
         }
 
-    resp = table.delete_item(
-        Key={"id": f"group#{group_id}", "sk": f"member#{user_id}"})
+    resp = table.delete_item(Key={"id": f"group#{group_id}", "sk": f"member#{user_id}"})
     return {
         "statusCode": 200,
         "body": json.dumps({"code": "ok", "message": "delete member group"}),
@@ -604,10 +643,12 @@ def delete_group_member(event, table):
 
 @xray_recorder.capture("CUD user/group")
 def lambda_handler(event, context):
-    logger.info(event)
-    name = os.environ.get("SYSTEM_NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
-    region = os.environ.get("REGION", "ap-northest-1")
+    logger.info(f"event:: {event}")
+
+    name = os.environ.get("SYSTEM_NAME")
+    env = os.environ.get("ENV")
+    region = os.environ.get("REGION")
+
     authorizer_lambda = event["requestContext"]["authorizer"]["lambda"]
     system_id = authorizer_lambda["system_id"]
     tenant_id = authorizer_lambda["tenant_id"]

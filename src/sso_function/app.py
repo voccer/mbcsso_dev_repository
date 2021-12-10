@@ -9,7 +9,7 @@ logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 def create_sso(event):
     name = os.environ.get("NAME", "mbcsso")
-    env = os.environ.get("ENV", "dev")
+    env = os.environ.get("ENV")
     region = os.environ.get("REGION", "ap-northeast-1")
     body = json.loads(event["body"])
     system_id = body["system_id"]
