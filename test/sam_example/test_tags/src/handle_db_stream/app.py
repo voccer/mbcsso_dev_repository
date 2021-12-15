@@ -8,9 +8,9 @@ def lambda_handler(event, context):
     # user_table = boto3.resource("dynamodb", region_name)
     # table = user_table.Table(table_name)
     for record in event["Records"]:
-        print(record["eventID"])
-        print(record["eventName"])
-    print("Successfully processed %s records." % str(len(event["Records"])))
+        logger.info(record["eventID"])
+        logger.info(record["eventName"])
+    logger.info("Successfully processed %s records." % str(len(event["Records"])))
 
     return {
         "statusCode": 200,

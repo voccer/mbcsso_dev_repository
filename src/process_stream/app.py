@@ -2,13 +2,18 @@ import os
 import json
 import boto3
 
+from shared_code.logger import Logger
+
+logger = Logger().get_logger()
 
 def lambda_handler(event, context):
-    print(f"Process stream event: {event}")
-    infos = []
+    logger.info(f"Process stream event: {event}")
     system_name = os.environ.get("SYSTEM_NAME")
     env = os.environ.get("ENV")
     prefix = f"{system_name}_{env}"
+
+    infos = []
+
     for record in event["Records"]:
         info = {}
         ddb_arn = record["eventSourceARN"]
@@ -33,7 +38,7 @@ def lambda_handler(event, context):
         if "data" in info:
             infos.append(info)
 
-    print(f"Process stream infos: {infos}")
+    logger.info(f"Process stream infos: {infos}")
 
     topic_name = os.environ.get("TOPIC_NAME")
     region = os.environ.get("REGION")
@@ -50,7 +55,7 @@ def lambda_handler(event, context):
         },
     )
 
-    print(f"Publish to {topic_name} with response:: {response}")
+    logger.info(f"Publish to {topic_name} with response:: {response}")
 
     return {
         "statusCode": 200,

@@ -4,6 +4,10 @@ import requests
 import jwt
 from aws_xray_sdk.core import xray_recorder
 
+from shared_code.logger import Logger
+
+logger = Logger().get_logger()
+
 admin_roles = [
     "manage-authorization",
     "manage-clients",
@@ -51,7 +55,7 @@ def check_authorization(
     if not system_id or not tenant_id or not access_token:
         return False
 
-    print("check authorization")
+    logger.info("check authorization")
     client = boto3.client("dynamodb", region_name=region)
 
     try:
@@ -60,7 +64,7 @@ def check_authorization(
             Key={"system_id": {"S": system_id}, "tenant_id": {"S": tenant_id}},
         )
     except Exception as e:
-        print(e)
+        logger.info(e)
 
         return False
 
@@ -76,8 +80,6 @@ def check_authorization(
     # keycloak_realm = kms.decrypt(CiphertextBlob=bytes.fromhex(keycloak_realm))['Plaintext'].decode('utf-8')
     # keycloak_realm_encrypted = kms.encrypt(KeyId='alias/keycloak_realm', Plaintext=keycloak_realm.encode('utf-8'))['CiphertextBlob'].hex()
 
-    print(keycloak_url, keycloak_realm)
-
     if not keycloak_url or not keycloak_realm:
         return False
 
@@ -85,13 +87,14 @@ def check_authorization(
         f"{keycloak_url}/auth/realms/{keycloak_realm}/protocol/openid-connect/userinfo"
     )
 
-    if access_token == "secret":
-        return True
     headers = {"Authorization": f"Bearer {access_token}"}
     payload = {}
     response = requests.request(
         "GET", url=keycloak_userinfo_url, headers=headers, data=payload
     )
+
+    if access_token == "secret":
+        return True
     if response.status_code != 200:
         return False
 
@@ -113,16 +116,17 @@ def check_authorization(
 
 @xray_recorder.capture("authorizer")
 def lambda_handler(event, context):
-    print(f"authorizer event: {event}")
+    logger.info(f"authorizer event: {event}")
+
     name = os.environ.get("SYSTEM_NAME")
     env = os.environ.get("ENV")
-    region = os.environ.get("REGION", "ap-northeast-1")
+    region = os.environ.get("REGION")
+
     config_table_name = "{}_{}_Config".format(name, env)
     access_token = event["headers"].get("authorization")
 
-    system_id, tenant_id = event.get("queryStringParameters", {}).get(
-        "system_id"
-    ), event.get("queryStringParameters", {}).get("tenant_id")
+    system_id = event.get("queryStringParameters", {}).get("system_id")
+    tenant_id = event.get("queryStringParameters", {}).get("tenant_id")
 
     route_key = event["requestContext"]["routeKey"]
 
@@ -131,22 +135,25 @@ def lambda_handler(event, context):
     user_id = event.get("pathParameters", {}).get("user_id")
 
     action = ""
-    if method == "POST" and path == "/users":
-        action = "create_user"
-    elif method == "PUT" and path == "/users/{user_id}":
-        action = f"update_user#{user_id}"
-    elif method == "DELETE" and path == "/users/{user_id}":
-        action = "delete_user"
-    elif method == "POST" and path == "/groups":
-        action = "create_group"
-    elif method == "PUT" and path == "/groups/{group_id}":
-        action = "update_group"
-    elif method == "DELETE" and path == "/groups/{group_id}":
-        action = "delete_group"
-    elif method == "PUT" and path == "/users/{user_id}/groups/{group_id}":
-        action = "add_user_to_group"
-    elif method == "DELETE" and path == "/users/{user_id}/groups/{group_id}":
-        action = "remove_user_from_group"
+    if method == "POST":
+        if path == "/users":
+            action = "create_user"
+        elif path == "/groups":
+            action = "create_group"
+    elif method == "PUT":
+        if path == "/users/{user_id}":
+            action = f"update_user#{user_id}"
+        elif path == "/groups/{group_id}":
+            action = "update_group"
+        elif path == "/users/{user_id}/groups/{group_id}":
+            action = "add_user_to_group"
+    elif method == "DELETE":
+        if path == "/users/{user_id}":
+            action = "delete_user"
+        elif path == "/groups/{group_id}":
+            action = "delete_group"
+        elif path == "/users/{user_id}/groups/{group_id}":
+            action = "remove_user_from_group"
     elif method == "GET":
         if path == "/users":
             action = "search_users"
@@ -167,9 +174,11 @@ def lambda_handler(event, context):
     is_authorized = check_authorization(
         system_id, tenant_id, access_token, config_table_name, action, region
     )
-    print(system_id, tenant_id, access_token, is_authorized)
+    logger.info(
+        f"system_id: {system_id}, tenant_id: {tenant_id}, is_authorized: {is_authorized}"
+    )
+
     if is_authorized:
-        print("Authorized")
         response = {
             "isAuthorized": True,
             "context": {"system_id": system_id, "tenant_id": tenant_id},

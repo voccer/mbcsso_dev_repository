@@ -1,19 +1,23 @@
 
 # !/bin/bash
+
 cd infra/sam_mbc
-sam build -t template_db.yaml
+
+## default systemname is mbcsso, change it if you want
+sam build -t template_db.yaml 
+
 
 printf "Enter profile name [required]:"
 read PROFILE
 if [ -z "$PROFILE" ]
-then echo "Profile name is required"
-    exit 1
+then echo "Profile name set default"
+    PROFILE="default"
 fi
 
 sam deploy --profile $PROFILE -g
 
 printf "Enter system name [default: mbcsso]:"
-read Name
+read SystemName
 printf "Enter env [default: dev]:"
 read Env
 
@@ -25,7 +29,9 @@ if [ -z "$Env" ]
 then Env="dev"
 fi
 
-TABLE_CONFIG_NAME="${Name}_${Env}_Config"
+TABLE_CONFIG_NAME="${SystemName}_${Env}_Config"
+
+echo $TABLE_CONFIG_NAME
 
 #create item Config table
 aws dynamodb put-item \
@@ -40,3 +46,4 @@ aws dynamodb put-item \
         "password": {"S": "AQICAHidx/6BTLp0wg1UBw7cjvQdfoPXHCN/qdoTrXLhVs4FTQEzZ/Ph2Ja6ruv+B8QbA6tgAAAAejB4BgkqhkiG9w0BBwagazBpAgEAMGQGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMzJPhJTLofbOfpzIAAgEQgDfgOmzG8ze37QwCfxQnTMJbFy8r908C+dlLjoEWZNPUo3I7kxG7tCfdswpUMdS+yCDA3hzeSvK/"}
       }' \
     --return-consumed-capacity TOTAL
+

@@ -2,9 +2,9 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "sam-db"
+stack_name = "mbcsso-dev-db-test"
 s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-15wy90y4nj0it"
-s3_prefix = "sam-db"
+s3_prefix = "mbcsso-dev-db-test"
 region = "ap-northeast-1"
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "Region=\"ap-northeast-1\" Name=\"mbcsso\" Env=\"dev\" ReadCapacityUnits=\"5\" WriteCapacityUnits=\"5\" BatchSizeStreaming=\"5\""

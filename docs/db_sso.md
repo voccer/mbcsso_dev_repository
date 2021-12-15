@@ -32,7 +32,7 @@ About PREFIX:
 | ------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | `id`          | String        | Partition Key.<br>- `user#username`: user partition <br>- `group#name`: group partition                                                                       |                     |
 | `sk`          | String        | Sort Key.<br>- `config`: user and group (latest version) info<br>- `config#version`: user and group (older version) info<br>- `member#uid`: group member info |                     |
-| `command`     | String        | Command:<br> - `add`: Add action<br> - `update`: Update action<br> - `delete`: Delete action                                                                  |                     |
+| `command`     | String        | Command:<br> - `add`: Add action<br> - `update`: Update action<br> - `delete`: Delete action <br>sk: `config#version`<br>sk: `config`                         |                     |
 | `sso_type`    | String        | SSO type:<br>- `keycloak`                                                                                                                                     | `keycloak`          |
 | `email`       | String        | Unique user' Email.<br>pk: `user#username`                                                                                                                    | `undefined`         |
 | `password`    | String        | Encrypted user's password. <br>pk: `user#username`                                                                                                            | `undefined`         |
@@ -62,7 +62,20 @@ About PREFIX:
 | `attributes` |               |
 
 - Uses Case
-  - Fetch user by email
+  - Check email already exists
+
+
+## 2.3. GSI User-Group Table
+
+- name: `UserGroupGSI`
+
+| Field        | Type            |
+| ------------ | --------------- |
+| `sk`         | Partition key   |
+| `id`         | Sort Key        |
+
+- Uses Case
+  - Fetch groups by user' id
 
 ## 3. Read User Table Schema
 

@@ -6,21 +6,18 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from aws_xray_sdk.core import xray_recorder
 
+from shared_code.logger import Logger
+from shared_code.utils import get_query_table_name
 
-logger = logging.getLogger()
-logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+logger = Logger().get_logger()
 
 
 @xray_recorder.capture("get user")
 def get_user(event, table):
-    raw_path = event.get("rawPath", None)
-    if raw_path is None:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
+    path_params = event.get("pathParameters")
+    logger.info(f"params:: {path_params}")
 
-    user_id = raw_path.split("/")[-1]
+    user_id = path_params["user_id"]
     user_id = str(user_id).lower()
 
     resp = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
@@ -30,14 +27,18 @@ def get_user(event, table):
     if item is None:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+            "body": json.dumps(
+                {"code": "E_INVALID", "message": "User not found or inactive"}
+            ),
         }
     else:
         is_active = item.get("is_active", None)
         if is_active is None or str(is_active) != "1":
             return {
                 "statusCode": 400,
-                "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
+                "body": json.dumps(
+                    {"code": "E_INVALID", "message": "User not found or inactive"}
+                ),
             }
         else:
             data = {"id": f"{user_id}"}
@@ -53,27 +54,28 @@ def get_user(event, table):
 def search_user(event, table):
     items = []
     query_params = event["queryStringParameters"]
-    print(f"query:: {query_params}")
+    logger.info(f"query:: {query_params}")
 
     if "username" in query_params:
         user_id = query_params["username"]
         user_id = str(user_id).lower()
-        print(f"username:: {user_id}")
+        logger.info(f"username:: {user_id}")
         resp = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
         if resp.get("Item", None) is not None:
             items.append(resp["Item"])
     elif "email" in query_params:
         email = query_params["email"]
-        print(f"email:: {email}")
+        logger.info(f"email:: {email}")
         resp = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(
+                email) & Key("sk").eq("config"),
         )
         if resp.get("Items", None) is not None:
             items = resp["Items"]
     elif "first_name" in query_params:
         first_name = query_params["first_name"]
-        print(f"first_name:: {first_name}")
+        logger.info(f"first_name:: {first_name}")
         resp = table.query(
             IndexName="UserFirstNameGSI",
             KeyConditionExpression=Key("first_name").eq(first_name),
@@ -84,7 +86,7 @@ def search_user(event, table):
             items = resp["Items"]
     elif "last_name" in query_params:
         last_name = query_params["last_name"]
-        print(f"last_name:: {last_name}")
+        logger.info(f"last_name:: {last_name}")
         resp = table.query(
             IndexName="UserLastNameGSI",
             KeyConditionExpression=Key("last_name").eq(last_name),
@@ -95,7 +97,7 @@ def search_user(event, table):
             items = resp["Items"]
     elif "last_name_contains" in query_params:
         last_name_contains = query_params["last_name_contains"]
-        print(f"last_name_contains:: {last_name_contains}")
+        logger.info(f"last_name_contains:: {last_name_contains}")
         resp = table.scan(
             IndexName="UserLastNameGSI",
             FilterExpression=Attr("last_name").begins_with(last_name_contains),
@@ -103,10 +105,11 @@ def search_user(event, table):
         items = resp["Items"]
     elif "first_name_contains" in query_params:
         first_name_contains = query_params["first_name_contains"]
-        print(f"first_name_contains:: {first_name_contains}")
+        logger.info(f"first_name_contains:: {first_name_contains}")
         resp = table.scan(
             IndexName="UserFirstNameGSI",
-            FilterExpression=Attr("first_name").begins_with(first_name_contains),
+            FilterExpression=Attr("first_name").begins_with(
+                first_name_contains),
         )
         items = resp["Items"]
     else:
@@ -118,17 +121,17 @@ def search_user(event, table):
 
     for item in items:
         is_active = item.get("is_active", None)
-        if is_active is not None and str(is_active).strip() == "1":
-            item_filter = {
-                "id": str(item.get("id")[5:]),
-            }
+        if is_active:
+            item_filter = {"id": item.get("id").replace("user#", "")}
             item_filter["email"] = item.get("email", "")
             item_filter["first_name"] = item.get("first_name", "")
             item_filter["last_name"] = item.get("last_name", "")
             item_filter["attributes"] = item.get("attributes", {})
 
             items_resp.append(item_filter)
-    print(f"item_resp:: {items_resp}")
+
+    logger.info(f"item_resp:: {items_resp}")
+
     return {"statusCode": 200, "body": json.dumps({"code": "ok", "data": items_resp})}
 
 
@@ -139,31 +142,27 @@ def search_group(event):
 
 @xray_recorder.capture("get group")
 def get_group(event, table):
-    path_params = event.get("pathParameters", "")
-    print(f"params:: {path_params}")
-    if path_params == "":
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
+    path_params = event.get("pathParameters")
+    logger.info(f"params:: {path_params}")
 
     group_id = path_params["group_id"]
     group_id = str(group_id).lower()
 
-    print("pass get infor")
+    logger.info("pass get infor")
 
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
         if str(is_active).strip() != "1":
-            print("check_group:: not active")
+            logger.info("check_group:: not active")
             return {
                 "statusCode": 400,
                 "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
             }
     else:
-        print("check_group:: not exist")
+        logger.info("check_group:: not exist")
         return {
             "statusCode": 400,
             "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
@@ -172,24 +171,14 @@ def get_group(event, table):
     group = check_group.get("Item")
     group_resp = {"groupname": f"group_id"}
     group_resp["description"] = group.get("description", "")
+
     return {"statusCode": 200, "body": json.dumps({"code": "ok", "data": group_resp})}
 
 
 @xray_recorder.capture("search user_group")
 def search_user_group(event, table):
     path_params = event.get("pathParameters", "")
-    print(f"params:: {path_params}")
-    if path_params == "":
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
-    if "user_id" not in path_params:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
-
+    logger.info(f"params:: {path_params}")
     user_id = path_params["user_id"]
     user_id = str(user_id).lower()
 
@@ -213,13 +202,13 @@ def search_user_group(event, table):
         & Key("id").begins_with("group#"),
     )
     items = resp.get("Items", None)
-    print(f"Items:: {items}")
+    logger.info(f"Items:: {items}")
     data = []
     if items is not None:
         for item in items:
             pk = item["id"]
             sk = f"config"
-            print(f"id:: {pk}, sk:: {sk}")
+            logger.info(f"id:: {pk}, sk:: {sk}")
             group_resp = table.get_item(Key={"id": pk, "sk": sk})
             group = group_resp.get("Item", None)
             if group is not None:
@@ -236,8 +225,8 @@ def search_user_group(event, table):
 def lambda_handler(event, context):
     logger.info(event)
 
-    name = os.environ.get("SYSTEM_NAME")
-    env = os.environ.get("ENV")
+    # name = os.environ.get("SYSTEM_NAME")
+    # env = os.environ.get("ENV")
 
     region = os.environ.get("REGION")
     authorizer_lambda = event["requestContext"]["authorizer"]["lambda"]
@@ -247,7 +236,8 @@ def lambda_handler(event, context):
         authorizer_lambda["tenant_id"],
     )
 
-    user_query_table_name = f"{name}_{env}_{system_id}_{tenant_id}_users"
+    # user_query_table_name = f"{name}_{env}_{system_id}_{tenant_id}_users"
+    user_query_table_name = get_query_table_name(system_id, tenant_id)
 
     user_query_table = boto3.resource("dynamodb", region_name=region).Table(
         user_query_table_name

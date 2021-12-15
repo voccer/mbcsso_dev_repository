@@ -225,7 +225,7 @@ ehthumbs_vista.db
 # Folder config file
 Desktop.ini
 .aws-sam
-
+samconfig*
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/

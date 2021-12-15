@@ -1,4 +1,8 @@
 # MBC
+
+[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
+[![jp](https://img.shields.io/badge/lang-jp-yellow.svg)](README_ja.md)
+
 ソースファイルの構成は以下の通り。
 
 - docsファイル - ドキュメントファイル
@@ -123,3 +127,12 @@ $ sam build -t template_db.yaml
 $ sam deploy --profile <AWS認証のため、こちらに初期アカウントのプロファイルを指定する。> -g 
 
 ```
+
+## Setup mockup data
+下記のCLIで bash shell file setup_db.sh を実行する。
+
+```bash
+./setup_db.sh
+```
+
+Windows OS の場合、実行する前に Ubuntu app in Microsoft Store をインストールする必要がある。

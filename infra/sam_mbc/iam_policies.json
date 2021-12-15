@@ -7,8 +7,17 @@
         "ecr:*",
         "cloudformation:*",
         "lambda:*",
+        "apiGateway:*",
         "s3:*",
-        "dynamodb:*"
+        "dynamodb:*",
+        "sns:*",
+        "sqs:*",
+        "kms:*",
+        "logs:*",
+        "codebuild:*",
+        "codepipeline:*",
+        "codestar-connections:*",
+        "events:*"
       ],
       "Resource": "*"
     },
@@ -27,6 +36,7 @@
         "iam:GetPolicy",
         "iam:GetPolicyVersion",
         "iam:GetRole",
+        "iam:PassRole",
         "iam:GetRolePolicy",
         "iam:ListAttachedRolePolicies",
         "iam:ListPolicies",

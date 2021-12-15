@@ -10,8 +10,8 @@ def lambda_handler(event, context):
         },
     }
 
-    print("author")
-    print(event)
+    logger.info("author")
+    logger.info(event)
     if event["headers"]["authorization"] == "secretToken":
         response = {
             "isAuthorized": True,

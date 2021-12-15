@@ -1,24 +1,31 @@
 import os
 import json
 import time
-import logging
 import base64
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from aws_xray_sdk.core import xray_recorder
 
+from shared_code.utils import get_command_table_name
+from shared_code.logger import Logger
 
-logger = logging.getLogger()
-logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+
+logger = Logger().get_logger()
 
 
 @xray_recorder.capture("encrypt")
-def encrypt(string):
-    res = ""
-    for i in string:
-        res += chr(ord(i) + 1)
+def kms_encrypt(plaintext):
+    kms_client = boto3.client("kms")
+    kms_key_id = os.environ.get("KMS_KEY_ID")
 
-    return res
+    cipher_text = kms_client.encrypt(
+        KeyId=kms_key_id,
+        Plaintext=bytes(plaintext, encoding="utf-8"),
+    )
+    cipher_text = base64.b64encode(
+        cipher_text["CiphertextBlob"]).decode("utf-8")
+
+    return cipher_text
 
 
 @xray_recorder.capture("create user")
@@ -28,13 +35,16 @@ def create_user(event, table):
     if "username" not in body:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "username required"}),
+            "body": json.dumps(
+                {"code": "E_INVALID", "message": "username is required"}
+            ),
         }
 
     user_id = body["username"]
     user_id = str(user_id).lower()
 
-    get_item_ret = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
+    get_item_ret = table.get_item(
+        Key={"id": f"user#{user_id}", "sk": "config"})
     user_item = get_item_ret.get("Item")
 
     if user_item:
@@ -43,13 +53,9 @@ def create_user(event, table):
             return {
                 "statusCode": 400,
                 "body": json.dumps(
-                    {"code": "E_INVALID", "message": "user name already exist"}
+                    {"code": "E_INVALID", "message": "username already exist"}
                 ),
             }
-
-        # current_version = user_item.get("version")
-        # user_item["sk"] = f"config#{current_version}"
-        # table.put_item(Item=user_item)
 
     params = {
         "id": "user#" + user_id,
@@ -80,14 +86,7 @@ def create_user(event, table):
                 }
 
     if "password" in body:
-        kms_client = boto3.client("kms")
-        cipher_text = kms_client.encrypt(
-            KeyId=os.environ.get("KMS_KEY_ID"),
-            Plaintext=bytes(body["password"], encoding="utf-8"),
-        )
-        params["password"] = base64.b64encode(cipher_text["CiphertextBlob"]).decode(
-            "utf-8"
-        )
+        params["password"] = kms_encrypt(body["password"])
 
     if "first_name" in body:
         params["first_name"] = body["first_name"]
@@ -113,8 +112,12 @@ def create_user(event, table):
 
 @xray_recorder.capture("update user")
 def update_user(event, table):
-    body = json.loads(event["body"])
+    path_params = event.get("pathParameters")
+    logger.info(f"params:: {path_params}")
+    user_id = path_params["user_id"]
+    user_id = str(user_id).lower()
 
+    body = json.loads(event["body"])
     if "username" in body:
         return {
             "statusCode": 400,
@@ -123,15 +126,6 @@ def update_user(event, table):
             ),
         }
 
-    raw_path = event.get("rawPath", None)
-    if raw_path is None:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
-
-    user_id = raw_path.split("/")[-1]
-    user_id = str(user_id).lower()
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
 
     if check_user.get("Item", None):
@@ -165,7 +159,8 @@ def update_user(event, table):
         email = params["email"]
         check_email = table.query(
             IndexName="UserEmailGSI",
-            KeyConditionExpression=Key("email").eq(email) & Key("sk").eq("config"),
+            KeyConditionExpression=Key("email").eq(
+                email) & Key("sk").eq("config"),
         )
         if check_email.get("Count") > 0:
             is_active = check_email["Items"][0].get("is_active", "")
@@ -180,16 +175,10 @@ def update_user(event, table):
         params["email"] = None
 
     if "password" in body:
-        kms_client = boto3.client("kms")
-        cipher_text = kms_client.encrypt(
-            KeyId=os.environ.get("KMS_KEY_ID"),
-            Plaintext=bytes(body["password"], encoding="utf-8"),
-        )
-        params["password"] = base64.b64encode(cipher_text["CiphertextBlob"]).decode(
-            "utf-8"
-        )
+        params["password"] = kms_encrypt(body["password"])
     else:
         params["password"] = None
+
     params["first_name"] = body.get("first_name", None)
     params["last_name"] = body.get("last_name", None)
 
@@ -212,7 +201,6 @@ def update_user(event, table):
         expression_attribute_values[":e"] = params["email"]
         update_expression += ", email = :e"
 
-    # for k, v in list(expression_attribute_values.items()):
     # add new record for command update, current record will add new record
     table.update_item(
         Key={"id": f"user#{user_id}", "sk": "config"},
@@ -238,15 +226,10 @@ def update_user(event, table):
 
 @xray_recorder.capture("delete user")
 def delete_user(event, table):
-    raw_path = event.get("rawPath", None)
-    if raw_path is None:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
+    path_params = event.get("pathParameters")
+    logger.info(f"params:: {path_params}")
 
-    user_id = raw_path.split("/")[-1]
-
+    user_id = path_params["user_id"]
     user_id = str(user_id).lower()
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
@@ -268,10 +251,10 @@ def delete_user(event, table):
     user = check_user.get("Item")
     current_version = user["version"]
 
-    # delete linked user group
+    # delete linked member of group
     resp = table.query(
         IndexName="UserGroupGSI",
-        KeyConditionExpression=Key("sk").eq(f"memeber#{user_id}")
+        KeyConditionExpression=Key("sk").eq(f"member#{user_id}")
         & Key("id").begins_with("group#"),
     )
 
@@ -279,7 +262,7 @@ def delete_user(event, table):
     if items is not None:
         for item in items:
             pk = item["id"]
-            sk = f"memeber#{user_id}"
+            sk = f"member#{user_id}"
             table.delete_item(Key={"id": pk, "sk": sk})
 
     # update current record to config#version
@@ -297,7 +280,7 @@ def delete_user(event, table):
     )
     return {
         "statusCode": 200,
-        "body": json.dumps({"code": "ok", "message": "delete user"}),
+        "body": json.dumps({"code": "ok", "message": "deleted user"}),
     }
 
 
@@ -307,14 +290,15 @@ def create_group(event, table):
     if "groupname" not in body:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "group_name required"}),
+            "body": json.dumps({"code": "E_INVALID", "message": "groupname required"}),
         }
 
     group_id = body["groupname"]
 
     group_id = str(group_id).lower()
 
-    get_item_ret = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    get_item_ret = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     group_item = get_item_ret.get("Item")
     if group_item:
@@ -323,13 +307,9 @@ def create_group(event, table):
             return {
                 "statusCode": 400,
                 "body": json.dumps(
-                    {"code": "E_INVALID", "message": "group name already exist"}
+                    {"code": "E_INVALID", "message": "groupname already exist"}
                 ),
             }
-
-        # current_version = group_item.get("version")
-        # group_item["sk"] = f"config#{current_version}"
-        # table.put_item(Item=group_item)
 
     params = {
         "id": "group#" + body["groupname"],
@@ -342,6 +322,8 @@ def create_group(event, table):
     }
     if "description" in body:
         params["description"] = body["description"]
+    if "attributes" in body:
+        params["attributes"] = body["attributes"]
 
     try:
         table.put_item(Item=params)
@@ -353,53 +335,54 @@ def create_group(event, table):
 
     return {
         "statusCode": 200,
-        "body": json.dumps({"code": "ok", "message": "create group"}),
+        "body": json.dumps({"code": "ok", "message": "created group"}),
     }
 
 
 @xray_recorder.capture("update group")
 def update_group(event, table):
+    path_params = event.get("pathParameters")
+    logger.info(f"params:: {path_params}")
+
+    group_id = path_params["group_id"]
+    group_id = str(group_id).lower()
+
     body = json.loads(event["body"])
 
     if "groupname" in body:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "groupname not edit"}),
+            "body": json.dumps(
+                {"code": "E_INVALID", "message": "groupname can not edit"}
+            ),
         }
 
     if "description" not in body:
         return {
             "statusCode": 400,
             "body": json.dumps(
-                {"code": "E_INVALID", "message": "description required"}
+                {"code": "E_INVALID", "message": "description is required"}
             ),
         }
 
-    raw_path = event.get("rawPath", None)
-    if raw_path is None:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
-
-    group_id = raw_path.split("/")[-1]
-    group_id = str(group_id).lower()
-
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
         if str(is_active).strip() != "1":
-            print("check_group:: not active")
+            logger.info("check_group:: not active")
             return {
                 "statusCode": 400,
-                "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
+                "body": json.dumps(
+                    {"code": "E_INVALID", "message": "group is not exist"}
+                ),
             }
     else:
-        print("check_group:: not exist")
+        logger.info("check_group:: not exist")
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
+            "body": json.dumps({"code": "E_INVALID", "message": "group is not exist"}),
         }
     group = check_group.get("Item")
 
@@ -429,23 +412,20 @@ def update_group(event, table):
 
     return {
         "statusCode": 200,
-        "body": json.dumps({"code": "ok", "message": "update group"}),
+        "body": json.dumps({"code": "ok", "message": "updated group"}),
     }
 
 
 @xray_recorder.capture("delete group")
 def delete_group(event, table):
-    raw_path = event.get("rawPath", None)
-    if raw_path is None:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
+    path_params = event.get("pathParameters")
+    logger.info(f"params:: {path_params}")
 
-    group_id = raw_path.split("/")[-1]
+    group_id = path_params["group_id"]
     group_id = str(group_id).lower()
 
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
     if check_group.get("Item", None) is None:
         return {
             "statusCode": 400,
@@ -490,56 +470,49 @@ def delete_group(event, table):
     )
     return {
         "statusCode": 200,
-        "body": json.dumps({"code": "ok", "message": "delete group"}),
+        "body": json.dumps({"code": "ok", "message": "deleted group"}),
     }
 
 
 @xray_recorder.capture("add group member")
 def add_group_member(event, table):
-    print("start::")
+    logger.info("add member to group")
     path_params = event.get("pathParameters", "")
-    print(f"params:: {path_params}")
-    if path_params == "":
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
-    if "user_id" not in path_params or "group_id" not in path_params:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
+    logger.info(f"params:: {path_params}")
 
     user_id = path_params["user_id"]
     group_id = path_params["group_id"]
 
     group_id = str(group_id).lower()
     user_id = str(user_id).lower()
-
-    print("pass get infor")
+    logger.info(f"user_id:: {user_id}, group_id:: {group_id}")
 
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
         if str(is_active).strip() != "1":
-            print("check_group:: not active")
+            logger.info("check_group:: not active")
             return {
                 "statusCode": 400,
-                "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
+                "body": json.dumps(
+                    {"code": "E_INVALID", "message": "group is not exist"}
+                ),
             }
     else:
-        print("check_group:: not exist")
+        logger.info("check_group:: not exist")
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
+            "body": json.dumps({"code": "E_INVALID", "message": "group is not exist"}),
         }
 
     if check_user.get("Item", None) is None:
+        logger.info("check_user:: not exist")
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "user not exist"}),
+            "body": json.dumps({"code": "E_INVALID", "message": "user is not exist"}),
         }
     else:
         is_active = check_user.get("Item").get("is_active", "")
@@ -551,40 +524,33 @@ def add_group_member(event, table):
 
     params = {
         "id": f"group#{group_id}",
-        "sk": f"member#{user_id}",
+        "sk": f"member#{user_id}"
     }
     resp = table.get_item(Key=params)
-    if resp.get("Item", None) is not None:
+    if resp.get("Item"):
         return {
             "statusCode": 500,
             "body": json.dumps(
                 {"code": "E_INVALID", "message": "user already exist in group"}
             ),
         }
-    params["sso_type"] = "keycloak"
+
     params["updated_at"] = int(time.time())
+    params["sso_type"] = 'keycloak'
+
     table.put_item(Item=params)
+
     return {
         "statusCode": 200,
-        "body": json.dumps({"code": "ok", "message": "add group member"}),
+        "body": json.dumps({"code": "ok", "message": "added group member"}),
     }
 
 
 @xray_recorder.capture("delete group member")
 def delete_group_member(event, table):
-    print("start::")
-    path_params = event.get("pathParameters", "")
-    print(f"params:: {path_params}")
-    if path_params == "":
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
-    if "user_id" not in path_params or "group_id" not in path_params:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "Input invalid"}),
-        }
+    logger.info("delete group member")
+    path_params = event.get("pathParameters")
+    logger.info(f"params:: {path_params}")
 
     user_id = path_params["user_id"]
     group_id = path_params["group_id"]
@@ -592,21 +558,20 @@ def delete_group_member(event, table):
     group_id = str(group_id).lower()
     user_id = str(user_id).lower()
 
-    print("pass get infor")
-
     check_user = table.get_item(Key={"id": f"user#{user_id}", "sk": "config"})
-    check_group = table.get_item(Key={"id": f"group#{group_id}", "sk": "config"})
+    check_group = table.get_item(
+        Key={"id": f"group#{group_id}", "sk": "config"})
 
     if check_group.get("Item", None):
         is_active = check_group["Item"].get("is_active", "")
         if str(is_active).strip() != "1":
-            print("check_group:: not active")
+            logger.info("check_group:: not active")
             return {
                 "statusCode": 400,
                 "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
             }
     else:
-        print("check_group:: not exist")
+        logger.info("check_group:: not exist")
         return {
             "statusCode": 400,
             "body": json.dumps({"code": "E_INVALID", "message": "group not exist"}),
@@ -615,14 +580,16 @@ def delete_group_member(event, table):
     if check_user.get("Item", None) is None:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "user not exist"}),
+            "body": json.dumps({"code": "E_INVALID", "message": "user is not exist"}),
         }
     else:
         is_active = check_user.get("Item").get("is_active", "")
         if str(is_active).strip() != "1":
             return {
                 "statusCode": 400,
-                "body": json.dumps({"code": "E_INVALID", "message": "user invalid"}),
+                "body": json.dumps(
+                    {"code": "E_INVALID", "message": "user is inactive"}
+                ),
             }
 
     check_member = table.get_item(
@@ -631,29 +598,31 @@ def delete_group_member(event, table):
     if check_member.get("Item", None) is None:
         return {
             "statusCode": 400,
-            "body": json.dumps({"code": "E_INVALID", "message": "user not in group"}),
+            "body": json.dumps(
+                {"code": "E_INVALID", "message": "user is not in group"}
+            ),
         }
 
-    resp = table.delete_item(Key={"id": f"group#{group_id}", "sk": f"member#{user_id}"})
+    resp = table.delete_item(
+        Key={"id": f"group#{group_id}", "sk": f"member#{user_id}"})
+
     return {
         "statusCode": 200,
-        "body": json.dumps({"code": "ok", "message": "delete member group"}),
+        "body": json.dumps({"code": "ok", "message": "deleted member group"}),
     }
 
 
 @xray_recorder.capture("CUD user/group")
 def lambda_handler(event, context):
     logger.info(f"event:: {event}")
-
-    name = os.environ.get("SYSTEM_NAME")
-    env = os.environ.get("ENV")
     region = os.environ.get("REGION")
 
     authorizer_lambda = event["requestContext"]["authorizer"]["lambda"]
     system_id = authorizer_lambda["system_id"]
     tenant_id = authorizer_lambda["tenant_id"]
 
-    user_commands_table_name = f"{name}_{env}_{system_id}_{tenant_id}_user_commands"
+    # user_commands_table_name = f"{name}_{env}_{system_id}_{tenant_id}_user_commands"
+    user_commands_table_name = get_command_table_name(system_id, tenant_id)
 
     user_commands_table = boto3.resource("dynamodb", region_name=region).Table(
         user_commands_table_name
@@ -661,7 +630,7 @@ def lambda_handler(event, context):
 
     route_key = event["requestContext"]["routeKey"]
 
-    [method, path] = route_key.split(" ")
+    method, path = route_key.split(" ")
 
     if method == "POST" and path == "/users":
         return create_user(event, table=user_commands_table)
@@ -684,20 +653,3 @@ def lambda_handler(event, context):
             "statusCode": 404,
             "body": json.dumps({"message": "Not found"}),
         }
-    # resource_paths = {
-    #     "/users": search_user,
-    #     "/users{user_id}": get_user,
-    #     "/users/{user}": user_handler,
-    #     "/users/{user}/services": user_services_handler,
-    # }
-
-    # resource_path = event["requestContext"]["resourcePath"]
-    # if resource_path in resource_paths:
-    #     try:
-    #         return respond(None, resource_paths[resource_path](event))
-    #     except Exception as e:
-    #         return respond(e)
-    # else:
-    #     return respond(
-    #         ValueError('Unsupported resource path "{}"'.format(resource_path))
-    #     )

@@ -10,26 +10,27 @@ Globals:
     Timeout: 3
 
 Resources:
-  MyRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: 'test-repository'
-      ImageScanningConfiguration:
-        ScanOnPush: 'true'
+  # MyRepository:
+  #   Type: AWS::ECR::Repository
+  #   Properties:
+  #     RepositoryName: 'test-repository'
+  #     ImageScanningConfiguration:
+  #       ScanOnPush: 'true'
 
   ECRTestFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
       FunctionName: ECRTestFunction
-      # ImageUri: !Ref MyRepository.RepositoryUri
-      ImageUri: 465316005105.dkr.ecr.ap-northeast-1.amazonaws.com/test-repository
+      # ImageUri: !GetAtt MyRepository.RepositoryUri
+      # ImageUri: abc
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ecr_test/
       DockerTag: latest
-Outputs:
-  Arn:
-    Value: !GetAtt MyRepository.Arn
-  RepUri:
-    Value: !GetAtt MyRepository.RepositoryUri
+
+# Outputs:
+#   Arn:
+#     Value: !GetAtt MyRepository.Arn
+#   RepUri:
+#     Value: !GetAtt MyRepository.RepositoryUri

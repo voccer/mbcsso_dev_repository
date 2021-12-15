@@ -3,9 +3,9 @@ import time
 
 
 def lambda_handler(event, context):
-    print("context")
-    print(context)
-    # print(context["authorizer"])
+    logger.info("context")
+    logger.info(context)
+    # logger.info(context["authorizer"])
     return {
         "statusCode": 200,
         "body": json.dumps(

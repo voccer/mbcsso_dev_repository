@@ -1,5 +1,8 @@
 # MBC
 
+[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
+[![jp](https://img.shields.io/badge/lang-jp-yellow.svg)](README_ja.md)
+
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
 - docs - Documents for application
@@ -58,3 +61,13 @@ The application that demonstrates continuous integration with AWS CodeBuild/Code
 The buildspecs folder contains the following buildspec files for use with AWS CodeBuild
 
 src/buildspec.yaml: Build the docker images
+
+## Setup mockup data
+
+Run bash shell file setup_db.sh
+
+```bash
+./setup_db.sh
+```
+
+If you use Window OS, please install Ubuntu app in Microsoft Store via tutorial [link](https://www.youtube.com/watch?v=pqn20YFvYWE&ab_channel=AddictiveTipsTV)

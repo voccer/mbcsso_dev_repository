@@ -51,8 +51,8 @@ def create_sso(event):
     config_table = dynamodb.Table(config_table_name)
     params = {"system_id": system_id, "tenant_id": tenant_id}
     response = config_table.put_item(TableName=config_table_name, Item=params)
-    print("response")
-    print(response)
+    logger.info("response")
+    logger.info(response)
 
     return
 

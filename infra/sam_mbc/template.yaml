@@ -7,18 +7,24 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 300
+    Timeout: !Ref FunctionTimeout
     Environment:
       Variables:
         REGION: !Ref AWS::Region
         ACCOUNT_ID: !Ref AWS::AccountId
         ENV: !Ref Env
         SYSTEM_NAME: !Ref SystemName
+    # Layers:
+    #   - !Ref LayerVersion
+    Tags:
+      Env: !Ref Env
+      SystemName: !Ref SystemName
 
 Parameters:
   SystemName:
     Type: String
     Default: mbcsso
+    Description: System name
   Env:
     Type: String
     AllowedValues:
@@ -26,9 +32,22 @@ Parameters:
       - prod
       - stg
     Default: dev
+  FunctionTimeout:
+    Type: Number
+    Default: 180
+    Description: Timeout for the function in seconds
+  QueueVisibilityTimeout:
+    Type: Number
+    Default: 200
+    Description: Timeout for the SQS message visibility must be greater than function timeout
+  PendWindowInDays:
+    Type: Number
+    Default: 7
+    Description: The number of days to wait before deleting a kms key.
   LatestDockerTag:
     Type: String
     Default: latest
+    Description: The docker tag to use for the latest image.
   GitHubOwner:
     Description: GitHub username owning the repo
     Type: String
@@ -40,28 +59,32 @@ Parameters:
   GitHubBranch:
     Description: GitHub repo branch name. It defaults to master if not specified.
     Type: String
-    Default: main
+    Default: master
   ConnectionId:
     Description: Connection ID for codestar
     Type: String
     Default: ''
   BuildSpecFilePath:
-    Description: Relative BuildSpec file path for build stage. For more information, see https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+    Description: Relative BuildSpec file path for build stage.
     Type: String
     Default: 'buildspec.yaml'
 
   RetentionInDays:
     Type: Number
     Default: 180
+    Description: The number of days to retain the logs, must be less than 180.
   ReadCapacityUnits:
     Type: Number
     Default: 5
+    Description: The read capacity units for the DynamoDB table.
   WriteCapacityUnits:
     Type: Number
     Default: 5
+    Description: The write capacity units for the DynamoDB table.
   BatchSize:
     Type: Number
     Default: 1
+    Description: The batch size for the Queue.
 
 Conditions:
   HasConnectionId: !Not [!Equals [!Ref ConnectionId, '']]
@@ -87,7 +110,6 @@ Resources:
           Value: !Ref SystemName
         - Key: Env
           Value: !Ref Env
-
   HttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -124,6 +146,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      Description: SSO Authorizer
       FunctionName: !Sub ${SystemName}_${Env}_AuthFunction
       Policies:
         - DynamoDBReadPolicy:
@@ -132,13 +155,9 @@ Resources:
             KeyId: '*'
         - KMSEncryptPolicy:
             KeyId: '*'
-      Tags:
-        Name: !Ref SystemName
-        Env: !Ref Env
-
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./src/authorizer/
+      DockerContext: src/authorizer/
       DockerTag: !Ref LatestDockerTag
 
   #kms
@@ -156,6 +175,7 @@ Resources:
               AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: '*'
+      PendingWindowInDays: !Ref PendWindowInDays
 
   KmsKeyAlias:
     Type: 'AWS::KMS::Alias'
@@ -234,12 +254,10 @@ Resources:
       Environment:
         Variables:
           KMS_KEY_ID: !Ref KmsKey
-      Tags:
-        Name: !Ref SystemName
-        Env: !Ref Env
+
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./src/command
+      DockerContext: src/command
       DockerTag: !Ref LatestDockerTag
   # function for query api
   QueryFunction:
@@ -287,18 +305,17 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /users/{user_id}/groups
             Method: GET
-      Tags:
-        Name: !Ref SystemName
-        Env: !Ref Env
+
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./src/query
+      DockerContext: src/query
       DockerTag: !Ref LatestDockerTag
 
   ProcessStreamFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      Description: !Sub 'process stream function for ${SystemName}_${Env}'
       FunctionName: !Sub ${SystemName}_${Env}_ProcessStreamFunction
       Policies:
         - DynamoDBStreamReadPolicy:
@@ -313,23 +330,21 @@ Resources:
       Environment:
         Variables:
           TOPIC_NAME: !GetAtt SNSTopic.TopicName
-      Tags:
-        Name: !Ref SystemName
-        Env: !Ref Env
+
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./src/process_stream
+      DockerContext: src/process_stream
       DockerTag: !Ref LatestDockerTag
 
   SQSQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub ${SystemName}_${Env}_queue
-
+      VisibilityTimeout: !Ref QueueVisibilityTimeout
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
 
   SNSTopic:
@@ -339,8 +354,9 @@ Resources:
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
+
   SQSSubscription:
     Type: AWS::SNS::Subscription
     Properties:
@@ -372,6 +388,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      Description: !Sub 'process sqs function for ${SystemName}_${Env}'
       FunctionName: !Sub ${SystemName}_${Env}_ProcessSQSFunction
       Policies:
         - DynamoDBCrudPolicy:
@@ -394,12 +411,10 @@ Resources:
       Environment:
         Variables:
           KMS_KEY_ID: !Ref KmsKey
-      Tags:
-        Name: !Ref SystemName
-        Env: !Ref Env
+
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./src/process_sqs
+      DockerContext: src/process_sqs
       DockerTag: !Ref LatestDockerTag
 
   # waiting functions for eventbridge
@@ -407,13 +422,11 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      Description: !Sub 'wait sqs consumer function for ${SystemName}_${Env}'
       FunctionName: !Sub ${SystemName}_${Env}_WaitSQSConsumer
-      Tags:
-        Name: !Ref SystemName
-        Env: !Ref Env
     Metadata:
       Dockerfile: Dockerfile
-      DockerContext: ./src/process_wait
+      DockerContext: src/process_wait
       DockerTag: !Ref LatestDockerTag
 
   EventRule:
@@ -462,7 +475,7 @@ Resources:
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
 
   ## Antifacts for codepipeline
@@ -476,7 +489,7 @@ Resources:
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
 
   Pipeline:
@@ -498,9 +511,9 @@ Resources:
                 Version: '1'
               Configuration:
                 ConnectionArn: !If
-                  - HasConnectionId
-                  - !Sub 'arn:${AWS::Partition}:codestar-connections:${AWS::Region}:${AWS::AccountId}:connection/${ConnectionId}'
+                  - NotHaveConnectionId
                   - !Ref GitHubConnection
+                  - !Sub 'arn:${AWS::Partition}:codestar-connections:${AWS::Region}:${AWS::AccountId}:connection/${ConnectionId}'
                 FullRepositoryId: !Sub '${GitHubOwner}/${GitHubRepo}'
                 BranchName: !Ref GitHubBranch
                 OutputArtifactFormat: 'CODE_ZIP'
@@ -524,7 +537,7 @@ Resources:
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
 
   PipelineRole:
@@ -569,11 +582,11 @@ Resources:
                 Action:
                   - 'codestar-connections:UseConnection'
                 Resource:
-                  - !Ref GitHubConnection
+                  - !Sub arn:${AWS::Partition}:codestar-connections:${AWS::Region}:${AWS::AccountId}:connection/*
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
   GitHubConnection:
     Condition: NotHaveConnectionId
@@ -584,7 +597,7 @@ Resources:
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
 
   BuildProject:
@@ -616,7 +629,7 @@ Resources:
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
 
   CodeBuildPolicy:
@@ -675,7 +688,7 @@ Resources:
       Tags:
         - Key: SystemName
           Value: !Ref SystemName
-        - Key: env
+        - Key: Env
           Value: !Ref Env
 Outputs:
   #   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
