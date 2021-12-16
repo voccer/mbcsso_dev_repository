@@ -13,6 +13,7 @@ phases:
       - echo "[+] Running pre-build tasks"
       - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
       - FUNCTION_NAMES="${SYSTEM_NAME}_${ENV}_CommandFunction ${SYSTEM_NAME}_${ENV}_ProcessSQSFunction ${SYSTEM_NAME}_${ENV}_ProcessStreamFunction ${SYSTEM_NAME}_${ENV}_AuthFunction ${SYSTEM_NAME}_${ENV}_QueryFunction ${SYSTEM_NAME}_${ENV}_WaitSQSConsumerFunction"
+      - REPO_NAME="${SYSTEM_NAME}_${ENV}_repository"
       - aws --version
       # login to ECR
       - aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URI}
