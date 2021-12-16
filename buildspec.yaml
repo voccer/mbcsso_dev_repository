@@ -35,5 +35,5 @@ phases:
       - echo "Pushed $ECR_URI/$REPO_NAME:$IMAGE_TAG"
       - echo "Pushed $ECR_URI/$REPO_NAME:$LATEST_DOCKER_TAG"
       - for FUNCTION_NAME in $(echo $FUNCTION_NAMES | sed "s/ / /g"); do
-        aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $ECR_URI/$REPO_NAME:$LATEST_TAG;
+        aws lambda update-function-code --function-name $FUNCTION_NAME --image-uri $ECR_URI/$REPO_NAME:$LATEST_DOCKER_TAG;
         done
