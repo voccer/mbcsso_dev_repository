@@ -302,8 +302,8 @@ paths:
       operationId: 'search_group'
       parameters:
         - in: query
-          name: group_name
-          description: group_name
+          name: groupname
+          description: groupname
           schema:
             type: string
             example: 'group1'
@@ -688,10 +688,6 @@ components:
     user_update_request:
       type: 'object'
       properties:
-        username:
-          type: 'string'
-          description: username
-          example: 'seller123'
         password:
           type: 'string'
           description: password
@@ -821,9 +817,9 @@ components:
     group_create_request:
       type: 'object'
       required:
-        - 'name'
+        - 'groupname'
       properties:
-        name:
+        groupname:
           type: 'string'
           description: 'Group name'
           example: 'group1'
@@ -840,10 +836,10 @@ components:
     group_update_request:
       type: 'object'
       properties:
-        name:
+        description:
           type: 'string'
-          description: 'Group name'
-          example: 'group1'
+          description: 'description of group'
+          example: 'this is group 1'
     group_update_response:
       type: 'object'
       required:

@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+
+  Sam for creating ecr
+
+Parameters:
+  SystemName:
+    Type: String
+    Default: mbcsso
+  Env:
+    Type: String
+    Default: dev
+
+Resources:
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${SystemName}_${Env}_repository #{PREFIX}_repository
+
+Outputs:
+  Arn:
+    Value: !GetAtt ECRRepository.Arn
+  RepUri:
+    Value: !GetAtt ECRRepository.RepositoryUri
+  

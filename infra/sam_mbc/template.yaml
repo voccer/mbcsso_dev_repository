@@ -14,8 +14,6 @@ Globals:
         ACCOUNT_ID: !Ref AWS::AccountId
         ENV: !Ref Env
         SYSTEM_NAME: !Ref SystemName
-    # Layers:
-    #   - !Ref LayerVersion
     Tags:
       Env: !Ref Env
       SystemName: !Ref SystemName
@@ -146,8 +144,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      Description: SSO Authorizer
       FunctionName: !Sub ${SystemName}_${Env}_AuthFunction
+      Description: SSO Authorizer
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${SystemName}_${Env}_repository:${LatestDockerTag}
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Sub ${SystemName}_${Env}_Config
@@ -155,11 +154,9 @@ Resources:
             KeyId: '*'
         - KMSEncryptPolicy:
             KeyId: '*'
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: src/authorizer/
-      DockerTag: !Ref LatestDockerTag
-
+      Environment:
+        Variables:
+          FUNCTION_NAME: auth
   #kms
   KmsKey:
     Type: AWS::KMS::Key
@@ -190,6 +187,7 @@ Resources:
       PackageType: Image
       FunctionName: !Sub ${SystemName}_${Env}_CommandFunction
       Description: !Sub 'command function for ${SystemName}_${Env}'
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${SystemName}_${Env}_repository:${LatestDockerTag}
       Tracing: Active
       Policies:
         - DynamoDBCrudPolicy:
@@ -254,11 +252,8 @@ Resources:
       Environment:
         Variables:
           KMS_KEY_ID: !Ref KmsKey
+          FUNCTION_NAME: command
 
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: src/command
-      DockerTag: !Ref LatestDockerTag
   # function for query api
   QueryFunction:
     Type: AWS::Serverless::Function
@@ -266,6 +261,7 @@ Resources:
       PackageType: Image
       FunctionName: !Sub ${SystemName}_${Env}_QueryFunction
       Description: !Sub 'query function for ${SystemName}_${Env}'
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${SystemName}_${Env}_repository:${LatestDockerTag}
       Tracing: Active
       Policies:
         - DynamoDBReadPolicy:
@@ -305,18 +301,17 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /users/{user_id}/groups
             Method: GET
-
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: src/query
-      DockerTag: !Ref LatestDockerTag
+      Environment:
+        Variables:
+          FUNCTION_NAME: query
 
   ProcessStreamFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      Description: !Sub 'process stream function for ${SystemName}_${Env}'
       FunctionName: !Sub ${SystemName}_${Env}_ProcessStreamFunction
+      Description: !Sub 'process stream function for ${SystemName}_${Env}'
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${SystemName}_${Env}_repository:${LatestDockerTag}
       Policies:
         - DynamoDBStreamReadPolicy:
             TableName: !Sub ${SystemName}_${Env}_*_*_user_commands
@@ -330,11 +325,7 @@ Resources:
       Environment:
         Variables:
           TOPIC_NAME: !GetAtt SNSTopic.TopicName
-
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: src/process_stream
-      DockerTag: !Ref LatestDockerTag
+          FUNCTION_NAME: process_stream
 
   SQSQueue:
     Type: AWS::SQS::Queue
@@ -388,8 +379,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
-      Description: !Sub 'process sqs function for ${SystemName}_${Env}'
       FunctionName: !Sub ${SystemName}_${Env}_ProcessSQSFunction
+      Description: !Sub 'process sqs function for ${SystemName}_${Env}'
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${SystemName}_${Env}_repository:${LatestDockerTag}
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Sub ${SystemName}_${Env}_*_*_users
@@ -411,23 +403,19 @@ Resources:
       Environment:
         Variables:
           KMS_KEY_ID: !Ref KmsKey
-
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: src/process_sqs
-      DockerTag: !Ref LatestDockerTag
+          FUNCTION_NAME: process_sqs
 
   # waiting functions for eventbridge
   WaitSQSConsumerFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
+      FunctionName: !Sub ${SystemName}_${Env}_WaitSQSConsumerFunction
       Description: !Sub 'wait sqs consumer function for ${SystemName}_${Env}'
-      FunctionName: !Sub ${SystemName}_${Env}_WaitSQSConsumer
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: src/process_wait
-      DockerTag: !Ref LatestDockerTag
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${SystemName}_${Env}_repository:${LatestDockerTag}
+      Environment:
+        Variables:
+          FUNCTION_NAME: process_wait
 
   EventRule:
     Type: AWS::Events::Rule
