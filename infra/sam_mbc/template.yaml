@@ -580,7 +580,7 @@ Resources:
     Condition: NotHaveConnectionId
     Type: 'AWS::CodeStarConnections::Connection'
     Properties:
-      ConnectionName: !Sub '${SystemName}-${Env}-github-connection2'
+      ConnectionName: !Sub '${SystemName}-${Env}-gh-conn2'
       ProviderType: GitHub
       Tags:
         - Key: SystemName
