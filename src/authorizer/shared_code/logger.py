@@ -15,7 +15,6 @@ class Logger:
             Logger.__instance = self
             Logger.__logger = logging.getLogger()
             Logger.__logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
-            Logger.__logger.info("Logger initialized")
 
     @staticmethod
     def get_logger():

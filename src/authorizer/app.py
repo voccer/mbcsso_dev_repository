@@ -57,12 +57,13 @@ def check_authorization(
         return False
 
     logger.info("check authorization")
-    client = boto3.client("dynamodb", region_name=region)
+    config_table = boto3.resource("dynamodb", region_name=region).Table(
+        config_table_name
+    )
 
     try:
-        response = client.get_item(
-            TableName=config_table_name,
-            Key={"system_id": {"S": system_id}, "tenant_id": {"S": tenant_id}},
+        response = config_table.get_item(
+            Key={"system_id": system_id, "tenant_id": tenant_id}
         )
     except Exception as e:
         logger.info(e)
@@ -72,17 +73,19 @@ def check_authorization(
     if not response.get("Item"):
         return False
 
-    keycloak_url = response["Item"]["keycloak_url"]["S"]
+    keycloak_url = response["Item"].get("keycloak_url")
 
-    keycloak_realm = response["Item"]["keycloak_realm"]["S"]
+    keycloak_realm = response["Item"].get("keycloak_realm")
+
+    if not keycloak_realm or not keycloak_url:
+        logger.info("keycloak_realm or keycloak_url is not set")
+
+        return False
 
     # #use kms to decrypt keycloak_realm
     # kms = boto3.client("kms")
     # keycloak_realm = kms.decrypt(CiphertextBlob=bytes.fromhex(keycloak_realm))['Plaintext'].decode('utf-8')
     # keycloak_realm_encrypted = kms.encrypt(KeyId='alias/keycloak_realm', Plaintext=keycloak_realm.encode('utf-8'))['CiphertextBlob'].hex()
-
-    if not keycloak_url or not keycloak_realm:
-        return False
 
     keycloak_userinfo_url = (
         f"{keycloak_url}/auth/realms/{keycloak_realm}/protocol/openid-connect/userinfo"
