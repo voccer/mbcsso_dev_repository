@@ -10,7 +10,7 @@ class Logger:
 
     def __init__(self):
         if Logger.__instance is not None:
-            raise Exception("This class is a singleton!")
+            pass
         else:
             Logger.__instance = self
             Logger.__logger = logging.getLogger()

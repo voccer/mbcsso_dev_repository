@@ -1,6 +1,6 @@
 FROM public.ecr.aws/lambda/python:3.9
 
-COPY app.py  config.py requirements.txt ./
+COPY app.py config.py requirements.txt ./
 COPY src/ ./src
 
 RUN python3.9 -m pip install -r requirements.txt -t .
